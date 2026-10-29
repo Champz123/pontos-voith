@@ -1,6 +1,7 @@
 package com.matheus.pontosvoith.ui
 
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -11,9 +12,16 @@ val FMT_HM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 val FMT_DIA: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 val FMT_DIA_CURTO: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM")
 val FMT_DATA_LONGA: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy", LOCALE_BR)
+val FMT_DIA_SEMANA: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, dd/MM/yyyy", LOCALE_BR)
+val FMT_MES_ANO: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", LOCALE_BR)
+val FMT_MES_CURTO: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM/yy", LOCALE_BR)
 
 fun Long.formatar(f: DateTimeFormatter): String =
     Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).format(f)
+
+fun LocalDateTime.paraMillis(): Long = atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+fun String.capitalizar(): String = replaceFirstChar { it.titlecase(LOCALE_BR) }
 
 /** 29400000 -> "08:10:00" */
 fun duracaoHms(ms: Long): String {
@@ -25,4 +33,10 @@ fun duracaoHms(ms: Long): String {
 fun duracaoTexto(ms: Long): String {
     val m = ms.coerceAtLeast(0) / 60000
     return "${m / 60}h ${String.format(LOCALE_BR, "%02d", m % 60)}min"
+}
+
+/** 29400000 -> "8h10" (compacto, para o calendário) */
+fun duracaoCurta(ms: Long): String {
+    val m = ms.coerceAtLeast(0) / 60000
+    return if (m % 60 == 0L) "${m / 60}h" else "${m / 60}h${String.format(LOCALE_BR, "%02d", m % 60)}"
 }

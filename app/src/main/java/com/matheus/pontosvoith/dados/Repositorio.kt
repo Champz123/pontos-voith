@@ -27,7 +27,6 @@ object Repositorio {
         app = ctx.applicationContext
         db = PontoDb(app)
         escopo.launch {
-            // Capturas interrompidas (app fechado no meio) viram "indisponível"
             val cv = ContentValues().apply { put("status_local", StatusLocal.INDISPONIVEL) }
             db.writableDatabase.update(
                 "batidas", cv, "status_local = ? AND data_hora < ?",
@@ -39,24 +38,85 @@ object Repositorio {
 
     private fun notificar() = _versao.update { it + 1 }
 
+    // ---------------------------------------------------------------- registrar
+
     suspend fun registrar(tipo: String): Batida = withContext(Dispatchers.IO) {
         val agora = System.currentTimeMillis()
+        val gpsLigado = Preferencias.gpsAtivo(app)
         val comPermissao = Localizacao.temPermissao(app)
+        val status = when {
+            !gpsLigado -> StatusLocal.DESATIVADO
+            !comPermissao -> StatusLocal.SEM_PERMISSAO
+            else -> StatusLocal.PENDENTE
+        }
         val cv = ContentValues().apply {
             put("tipo", tipo)
             put("data_hora", agora)
-            put("status_local", if (comPermissao) StatusLocal.PENDENTE else StatusLocal.SEM_PERMISSAO)
-            put("origem", "NORMAL")
+            put("status_local", status)
+            put("origem", Origem.NORMAL)
             put("ajustado", 0)
             put("criado_em", agora)
         }
-        // 1º grava o ponto (nunca espera o GPS)...
         val id = db.writableDatabase.insertOrThrow("batidas", null, cv)
         notificar()
-        // 2º ...depois tenta a localização em segundo plano
-        if (comPermissao) escopo.launch { capturarLocal(id) }
+        if (status == StatusLocal.PENDENTE) escopo.launch { capturarLocal(id) }
         buscar(id) ?: error("Registro não encontrado após gravar")
     }
+
+    /** Inclusão manual (retroativa): fica marcada como RETROATIVA no histórico. */
+    suspend fun incluirManual(tipo: String, dataHora: Long, obs: String?) = withContext(Dispatchers.IO) {
+        require(dataHora <= System.currentTimeMillis()) { "Não é possível registrar no futuro" }
+        val cv = ContentValues().apply {
+            put("tipo", tipo)
+            put("data_hora", dataHora)
+            put("status_local", StatusLocal.MANUAL)
+            put("origem", Origem.RETROATIVA)
+            put("ajustado", 0)
+            put("obs_ajuste", obs?.trim()?.takeIf { it.isNotEmpty() })
+            put("criado_em", System.currentTimeMillis())
+        }
+        db.writableDatabase.insertOrThrow("batidas", null, cv)
+        notificar()
+    }
+
+    /**
+     * Edita uma batida e a marca como "ajustada". Guarda o horário ORIGINAL
+     * (somente na primeira edição). Retorna false se nada mudou.
+     */
+    suspend fun editar(id: Long, tipo: String, dataHora: Long, obs: String?): Boolean = withContext(Dispatchers.IO) {
+        require(dataHora <= System.currentTimeMillis()) { "Não é possível registrar no futuro" }
+        val atual = buscar(id) ?: return@withContext false
+        val obsLimpa = obs?.trim()?.takeIf { it.isNotEmpty() }
+        if (atual.tipo == tipo && atual.dataHora == dataHora && atual.obsAjuste == obsLimpa) return@withContext false
+
+        val obsFinal = if (atual.tipo != tipo) {
+            listOfNotNull(obsLimpa, "Tipo alterado de ${nomeTipo(atual.tipo)} para ${nomeTipo(tipo)}").joinToString(" • ")
+        } else obsLimpa
+
+        val cv = ContentValues().apply {
+            put("tipo", tipo)
+            put("data_hora", dataHora)
+            put("obs_ajuste", obsFinal)
+            // Registros retroativos já são marcados como tal; só os normais viram "ajustado".
+            if (!atual.retroativa && (atual.dataHora != dataHora || atual.tipo != tipo)) {
+                put("ajustado", 1)
+                put("data_ajuste", System.currentTimeMillis())
+                if (atual.valorOriginal == null) put("valor_original", atual.dataHora)
+            }
+        }
+        db.writableDatabase.update("batidas", cv, "id = ?", arrayOf(id.toString()))
+        notificar()
+        true
+    }
+
+    suspend fun excluir(id: Long) = withContext(Dispatchers.IO) {
+        db.writableDatabase.delete("batidas", "id = ?", arrayOf(id.toString()))
+        notificar()
+    }
+
+    private fun nomeTipo(t: String) = if (t == TipoBatida.ENTRADA) "Entrada" else "Saída"
+
+    // ---------------------------------------------------------------- localização
 
     private suspend fun capturarLocal(id: Long) {
         val loc = runCatching { Localizacao.obter(app) }.getOrNull()
@@ -93,10 +153,12 @@ object Repositorio {
         }
     }
 
-    suspend fun ultimas(limite: Int): List<Batida> = withContext(Dispatchers.IO) {
-        db.readableDatabase.query(
-            "batidas", null, null, null, null, null, "data_hora DESC, id DESC", limite.toString()
-        ).use { c -> buildList { while (c.moveToNext()) add(c.toBatida()) } }
+    // ---------------------------------------------------------------- consultas
+
+    /** Todas as batidas em ordem cronológica (uso pessoal: volume pequeno). */
+    suspend fun todas(): List<Batida> = withContext(Dispatchers.IO) {
+        db.readableDatabase.query("batidas", null, null, null, null, null, "data_hora ASC, id ASC")
+            .use { c -> buildList { while (c.moveToNext()) add(c.toBatida()) } }
     }
 
     private fun buscar(id: Long): Batida? =
@@ -105,6 +167,7 @@ object Repositorio {
 
     private fun Cursor.toBatida(): Batida {
         fun dbl(col: String): Double? = getColumnIndexOrThrow(col).let { if (isNull(it)) null else getDouble(it) }
+        fun lng(col: String): Long? = getColumnIndexOrThrow(col).let { if (isNull(it)) null else getLong(it) }
         fun str(col: String): String? = getColumnIndexOrThrow(col).let { if (isNull(it)) null else getString(it) }
         return Batida(
             id = getLong(getColumnIndexOrThrow("id")),
@@ -116,7 +179,10 @@ object Repositorio {
             endereco = str("endereco"),
             statusLocal = getString(getColumnIndexOrThrow("status_local")),
             origem = getString(getColumnIndexOrThrow("origem")),
-            ajustado = getInt(getColumnIndexOrThrow("ajustado")) == 1
+            ajustado = getInt(getColumnIndexOrThrow("ajustado")) == 1,
+            dataAjuste = lng("data_ajuste"),
+            valorOriginal = lng("valor_original"),
+            obsAjuste = str("obs_ajuste")
         )
     }
 }

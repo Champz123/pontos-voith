@@ -1,36 +1,17 @@
 package com.matheus.pontosvoith.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -51,13 +32,7 @@ import com.matheus.pontosvoith.ui.theme.CorOk
 
 /** Botão redondo de ponto: encolhe ao tocar e, se for o "próximo esperado", emite ondas. */
 @Composable
-fun BotaoPonto(
-    texto: String,
-    cor: Color,
-    destaque: Boolean,
-    habilitado: Boolean,
-    onClick: () -> Unit
-) {
+fun BotaoPonto(texto: String, cor: Color, destaque: Boolean, habilitado: Boolean, onClick: () -> Unit) {
     val interacao = remember { MutableInteractionSource() }
     val pressionado by interacao.collectIsPressedAsState()
     val escala by animateFloatAsState(if (pressionado) 0.90f else 1f, tween(160), label = "escala")
@@ -66,7 +41,6 @@ fun BotaoPonto(
         initialValue = 0f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(1800, easing = LinearEasing)), label = "progresso"
     )
-
     Box(Modifier.size(156.dp), contentAlignment = Alignment.Center) {
         if (destaque) {
             Canvas(Modifier.matchParentSize()) {
@@ -93,7 +67,6 @@ fun BotaoPonto(
     }
 }
 
-/** Ponto verde pulsando (indica turno em andamento). */
 @Composable
 fun PontoPulsante(cor: Color = CorOk) {
     val t = rememberInfiniteTransition(label = "pulso")
@@ -122,20 +95,33 @@ fun ContadorAnimado(texto: String, tamanho: TextUnit = 40.sp, cor: Color = Mater
     }
 }
 
+/** Texto de horas que "conta" até o valor ao aparecer/mudar. */
+@Composable
+fun HorasAnimadas(ms: Long, tamanho: TextUnit = 22.sp, cor: Color = MaterialTheme.colorScheme.onSurface) {
+    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(ms) { anim.animateTo(ms.toFloat(), tween(900, easing = FastOutSlowInEasing)) }
+    Text(duracaoTexto(anim.value.toLong()), fontSize = tamanho, fontWeight = FontWeight.SemiBold, color = cor)
+}
+
+@Composable
+fun NumeroAnimado(valor: Int, tamanho: TextUnit = 22.sp, cor: Color = MaterialTheme.colorScheme.onSurface) {
+    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(valor) { anim.animateTo(valor.toFloat(), tween(700, easing = FastOutSlowInEasing)) }
+    Text(anim.value.toInt().toString(), fontSize = tamanho, fontWeight = FontWeight.SemiBold, color = cor)
+}
+
 enum class TipoMensagem { OK, AVISO, ERRO }
 data class Mensagem(val tipo: TipoMensagem, val texto: String, val id: Long = System.nanoTime())
 
-/** Texto animado de confirmação (sucesso/aviso/erro) abaixo dos botões. */
+/** Texto animado de confirmação (sucesso/aviso/erro). */
 @Composable
 fun MensagemAnimada(mensagem: Mensagem?) {
     AnimatedContent(
         targetState = mensagem,
-        transitionSpec = {
-            (fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 2 }) togetherWith fadeOut(tween(200))
-        },
+        transitionSpec = { (fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 2 }) togetherWith fadeOut(tween(200)) },
         label = "mensagem"
     ) { m ->
-        Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
             if (m != null) {
                 val cor = when (m.tipo) {
                     TipoMensagem.OK -> CorOk
@@ -150,5 +136,77 @@ fun MensagemAnimada(mensagem: Mensagem?) {
                 Text("$icone  ${m.texto}", color = cor, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, fontSize = 15.sp)
             }
         }
+    }
+}
+
+/** Mensagem que some sozinha após alguns segundos. */
+@Composable
+fun rememberMensagem(): MutableState<Mensagem?> {
+    val estado = remember { mutableStateOf<Mensagem?>(null) }
+    LaunchedEffect(estado.value) {
+        if (estado.value != null) {
+            kotlinx.coroutines.delay(3500)
+            estado.value = null
+        }
+    }
+    return estado
+}
+
+/** Seletor  ‹ texto ›  usado para dia e mês. */
+@Composable
+fun SeletorPeriodo(
+    texto: String,
+    onAnterior: () -> Unit,
+    onProximo: () -> Unit,
+    proximoHabilitado: Boolean = true,
+    onTexto: (() -> Unit)? = null
+) {
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onAnterior) { Text("‹", fontSize = 30.sp, color = cs.primary) }
+        Box(
+            Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .then(if (onTexto != null) Modifier.clickable { onTexto() } else Modifier)
+                .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(texto, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = cs.onBackground, textAlign = TextAlign.Center)
+        }
+        IconButton(onClick = onProximo, enabled = proximoHabilitado) {
+            Text("›", fontSize = 30.sp, color = if (proximoHabilitado) cs.primary else cs.onBackground.copy(alpha = 0.25f))
+        }
+    }
+}
+
+@Composable
+fun Selo(texto: String, cor: Color) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(cor.copy(alpha = 0.15f))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    ) {
+        Text(texto, color = cor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun TituloSecao(texto: String) {
+    Text(
+        texto, Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp),
+        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground
+    )
+}
+
+@Composable
+fun CartaoBase(modifier: Modifier = Modifier, conteudo: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(Modifier.padding(14.dp), content = conteudo)
     }
 }

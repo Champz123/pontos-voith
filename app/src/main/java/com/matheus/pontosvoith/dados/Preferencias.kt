@@ -12,4 +12,15 @@ object Preferencias {
     fun salvarTema(ctx: Context, escuro: Boolean) {
         sp(ctx).edit().putBoolean("tema_escuro", escuro).apply()
     }
+
+    fun gpsAtivo(ctx: Context): Boolean = sp(ctx).getBoolean("gps_ativo", true)
+    fun salvarGps(ctx: Context, ativo: Boolean) {
+        sp(ctx).edit().putBoolean("gps_ativo", ativo).apply()
+    }
+
+    /** E-mail padrão para envio de relatórios (usado na Entrega 4). */
+    fun email(ctx: Context): String = sp(ctx).getString("email_padrao", "") ?: ""
+    fun salvarEmail(ctx: Context, email: String) {
+        sp(ctx).edit().putString("email_padrao", email.trim()).apply()
+    }
 }

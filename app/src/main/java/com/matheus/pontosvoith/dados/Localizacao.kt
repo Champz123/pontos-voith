@@ -31,7 +31,6 @@ object Localizacao {
             .filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
         if (provedores.isEmpty()) return null
 
-        // Usa uma posição recente (até 2 min) e precisa, se existir
         val recente = provedores
             .mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
             .filter { System.currentTimeMillis() - it.time < 120_000 && it.accuracy <= 100f }

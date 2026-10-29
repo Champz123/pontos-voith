@@ -1,42 +1,45 @@
 ==========================================================================
- PONTOS VOITH – V2 (ENTREGA 2: banco de dados + GPS offline + tela principal)
+ PONTOS VOITH – V3 (ENTREGA 3: telas + animações + edição)
 ==========================================================================
 
-NOVIDADES DA V2
-- Botões ENTRADA e SAÍDA (você escolhe). O botão "esperado" emite ondas.
-- Registro salvo no celular (SQLite), 100% offline.
-- GPS capturado em segundo plano, sem bloquear o ponto (até 30 s).
-  Sem sinal: o ponto é salvo com "Localização indisponível".
-- Endereço por extenso preenchido automaticamente quando houver internet.
-- Cartão de status: turno em andamento com contador animado, ou duração
-  do último turno (turno que passa da meia-noite é contado como um só).
-- Texto animado: verde = sucesso, amarelo = aviso, vermelho = erro.
-- Últimos 6 registros na tela principal.
-- Tema claro/escuro agora fica salvo.
-- Chave de assinatura FIXA (app/pontosvoith.jks): a partir da V2, as
-  próximas versões instalam POR CIMA sem perder os registros.
+NOVIDADES DA V3
+- Navegação inferior com 5 abas: Ponto | Dia | Mês | Painel | Ajustes,
+  com transição deslizante entre as telas.
+- PONTO: aviso ANTES de registrar uma 2ª entrada quando já existe uma
+  entrada aguardando saída (Cancelar / Registrar mesmo assim).
+- DIA: horas trabalhadas do dia, turnos (ex.: 20:00 → 03:00 (+1)) e
+  registros. Toque num registro para editar/excluir. Botão "Incluir"
+  para registro manual (data/hora retroativa).
+  * Editado  -> selo AJUSTADO + horário original guardado.
+  * Incluído -> selo RETROATIVO.
+- MÊS: calendário colorido conforme as horas; ponto amarelo = turno
+  incompleto; toque no dia abre a aba Dia. Resumo do mês.
+- PAINEL: Hoje, Semana, Total do mês, Média/dia, Dias trabalhados,
+  Turnos incompletos (números animados) + gráfico de barras (horas por
+  dia) e gráfico de linha (últimos 6 meses), ambos animados.
+- AJUSTES: tema, GPS liga/desliga, atalho para permissões, e-mail
+  padrão (usado na Entrega 4) e informações do app.
+
+ATENÇÃO – CHAVE DE ASSINATURA
+O .zip NÃO contém o arquivo app/pontosvoith.jks. Use o que JÁ ESTÁ no
+GitHub desde a V2. NÃO apague a pasta "app" do repositório antes de
+subir; apenas arraste a nova por cima (o GitHub substitui os arquivos e
+mantém o .jks). Assim a V3 instala POR CIMA da V2 sem perder registros.
 
 COMO SUBIR NO GITHUB
 1. Extraia o .zip.
-2. No repositório: Add file > Upload files.
-3. Arraste as pastas "app" e ".github" inteiras (e "docs", opcional).
-   Se o Windows ocultar a pasta .github, basta editar o build.yml no
-   GitHub e colar o conteúdo do arquivo .github/workflows/build.yml.
-4. Commit changes. O build roda sozinho (aba Actions).
-
-INSTALAÇÃO (SOMENTE NESTA VEZ)
-- DESINSTALE a V1 antes de instalar a V2 (a assinatura mudou).
-  A V1 não guardava dados, então nada é perdido.
+2. Add file > Upload files > arraste as pastas "app" e ".github".
+   (Se a .github não aparecer no Windows, edite o build.yml no GitHub e
+   cole o conteúdo de .github/workflows/build.yml.)
+3. Commit changes. Aguarde o build na aba Actions.
+4. Baixe o APK em Artifacts e instale POR CIMA (não desinstale).
 
 TESTES SUGERIDOS
-[ ] Ao abrir, o app pede permissão de localização
-[ ] ENTRADA -> texto verde, cartão "Turno em andamento" com contador
-[ ] Registro aparece em "Últimos registros" com "Obtendo localização…"
-    e depois as coordenadas
-[ ] SAÍDA -> cartão mostra "Último turno: Xh YYmin"
-[ ] Duas ENTRADAS seguidas -> texto amarelo de aviso
-[ ] Modo avião -> ponto salvo normalmente (GPS ainda funciona ao ar livre)
-[ ] Fechar e abrir o app -> registros e tema continuam lá
-
-Obs.: os registros de teste poderão ser editados/excluídos na Entrega 3
-(Histórico).
+[ ] Com turno aberto, tocar ENTRADA -> aparece o aviso
+[ ] Aba Dia: editar um registro -> selo AJUSTADO + "Original: ..."
+[ ] Aba Dia: Incluir registro em dia passado -> selo RETROATIVO
+[ ] Aba Dia: excluir registro (pede confirmação)
+[ ] Aba Mês: dias coloridos; tocar num dia abre a aba Dia
+[ ] Aba Painel: números e gráficos animam ao abrir/trocar de mês
+[ ] Ajustes: desligar GPS -> nova batida mostra "GPS desativado"
+[ ] Registros da V2 continuam aparecendo após atualizar

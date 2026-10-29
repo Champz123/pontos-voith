@@ -12,12 +12,12 @@ android {
         applicationId = "com.matheus.pontosvoith"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "V2"
+        versionCode = 4
+        versionName = "V3"
     }
 
-    // Chave FIXA: todas as versões futuras são assinadas com ela,
-    // permitindo atualizar o app por cima sem perder os registros.
+    // Chave FIXA (app/pontosvoith.jks, já existente no repositório desde a V2).
+    // NÃO apague esse arquivo: é ele que permite atualizar sem perder os dados.
     signingConfigs {
         create("pessoal") {
             storeFile = file("pontosvoith.jks")
@@ -56,5 +56,6 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.animation:animation")
 }

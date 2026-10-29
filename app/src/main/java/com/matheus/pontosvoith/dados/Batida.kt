@@ -1,5 +1,10 @@
 package com.matheus.pontosvoith.dados
 
+import java.time.Instant
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
+
 object TipoBatida {
     const val ENTRADA = "ENTRADA"
     const val SAIDA = "SAIDA"
@@ -10,6 +15,13 @@ object StatusLocal {
     const val OK = "OK"
     const val INDISPONIVEL = "INDISPONIVEL"
     const val SEM_PERMISSAO = "SEM_PERMISSAO"
+    const val DESATIVADO = "DESATIVADO"
+    const val MANUAL = "MANUAL"
+}
+
+object Origem {
+    const val NORMAL = "NORMAL"
+    const val RETROATIVA = "RETROATIVA"
 }
 
 data class Batida(
@@ -22,33 +34,62 @@ data class Batida(
     val endereco: String?,
     val statusLocal: String,
     val origem: String,
-    val ajustado: Boolean
-)
-
-/** Estado calculado a partir das batidas: turno aberto e último turno fechado. */
-data class EstadoTurno(
-    val abertoDesde: Batida?,
-    val ultimoInicio: Batida?,
-    val ultimoFim: Batida?
+    val ajustado: Boolean,
+    val dataAjuste: Long?,
+    val valorOriginal: Long?,
+    val obsAjuste: String?
 ) {
-    val ultimoDuracaoMs: Long?
-        get() = if (ultimoInicio != null && ultimoFim != null) ultimoFim.dataHora - ultimoInicio.dataHora else null
+    val retroativa: Boolean get() = origem == Origem.RETROATIVA
 }
 
-/**
- * Pareia cada ENTRADA com a próxima SAÍDA (mesmo que seja no dia seguinte,
- * ex.: 20:00 -> 03:00 é um único turno). Batidas sem par não geram turno.
- */
-fun calcularEstado(batidas: List<Batida>): EstadoTurno {
+fun Long.paraData(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate()
+
+/** Um turno = ENTRADA + próxima SAÍDA (pode atravessar a meia-noite). */
+data class Turno(val entrada: Batida?, val saida: Batida?, val emAndamento: Boolean = false) {
+    val completo: Boolean get() = entrada != null && saida != null
+    val incompleto: Boolean get() = !completo && !emAndamento
+    val inicio: Long get() = entrada?.dataHora ?: saida?.dataHora ?: 0L
+    val duracaoMs: Long
+        get() {
+            val e = entrada
+            val s = saida
+            return if (e != null && s != null) s.dataHora - e.dataHora else 0L
+        }
+    /** O turno pertence ao dia da ENTRADA (ex.: 20:00 -> 03:00 conta no dia da entrada). */
+    val dia: LocalDate get() = inicio.paraData()
+}
+
+/** Monta os turnos a partir de todas as batidas (ordem cronológica). */
+fun montarTurnos(batidas: List<Batida>): List<Turno> {
+    val ord = batidas.sortedWith(compareBy({ it.dataHora }, { it.id }))
+    val res = ArrayList<Turno>()
     var aberta: Batida? = null
-    var ultIni: Batida? = null
-    var ultFim: Batida? = null
-    for (b in batidas.sortedWith(compareBy({ it.dataHora }, { it.id }))) {
+    for (b in ord) {
         if (b.tipo == TipoBatida.ENTRADA) {
+            if (aberta != null) res += Turno(aberta, null) // entrada sem saída
             aberta = b
-        } else if (aberta != null) {
-            ultIni = aberta; ultFim = b; aberta = null
+        } else {
+            if (aberta != null) {
+                res += Turno(aberta, b); aberta = null
+            } else {
+                res += Turno(null, b) // saída sem entrada
+            }
         }
     }
-    return EstadoTurno(aberta, ultIni, ultFim)
+    if (aberta != null) res += Turno(aberta, null, emAndamento = true)
+    return res
 }
+
+data class EstadoTurno(val abertoDesde: Batida?, val ultimoCompleto: Turno?)
+
+fun calcularEstado(turnos: List<Turno>): EstadoTurno = EstadoTurno(
+    abertoDesde = turnos.lastOrNull()?.takeIf { it.emAndamento }?.entrada,
+    ultimoCompleto = turnos.lastOrNull { it.completo }
+)
+
+/** Horas trabalhadas (ms) por dia, somente turnos completos. */
+fun horasPorDia(turnos: List<Turno>): Map<LocalDate, Long> =
+    turnos.filter { it.completo }.groupBy { it.dia }.mapValues { (_, l) -> l.sumOf { it.duracaoMs } }
+
+fun turnosDoMes(turnos: List<Turno>, mes: YearMonth): List<Turno> =
+    turnos.filter { YearMonth.from(it.dia) == mes }

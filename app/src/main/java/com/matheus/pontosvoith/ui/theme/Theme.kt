@@ -12,16 +12,21 @@ val VoithNavy = Color(0xFF16307A)
 val CorOk = Color(0xFF1FA463)
 val CorAviso = Color(0xFFE0A100)
 val CorErro = Color(0xFFD93025)
+val CorRetro = Color(0xFF7B5CFF)
 
 private val LightColors = lightColorScheme(
     primary = VoithBlue, onPrimary = Color.White,
+    secondaryContainer = Color(0xFFDCE5FF), onSecondaryContainer = Color(0xFF0B1B3F),
     background = Color.White, onBackground = Color(0xFF0B1B3F),
-    surface = Color(0xFFF2F5FF), onSurface = Color(0xFF0B1B3F)
+    surface = Color(0xFFF2F5FF), onSurface = Color(0xFF0B1B3F),
+    surfaceContainer = Color(0xFFF2F5FF)
 )
 private val DarkColors = darkColorScheme(
     primary = VoithBlueLight, onPrimary = Color.White,
+    secondaryContainer = Color(0xFF1C2A55), onSecondaryContainer = Color(0xFFE6ECFF),
     background = Color(0xFF05070D), onBackground = Color(0xFFE6ECFF),
-    surface = Color(0xFF0E1426), onSurface = Color(0xFFE6ECFF)
+    surface = Color(0xFF0E1426), onSurface = Color(0xFFE6ECFF),
+    surfaceContainer = Color(0xFF0E1426)
 )
 
 @Composable
