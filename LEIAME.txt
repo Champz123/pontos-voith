@@ -1,36 +1,42 @@
 ==========================================================================
- PONTOS VOITH – V1 (ENTREGA 1: projeto mínimo + build + ícone)
+ PONTOS VOITH – V2 (ENTREGA 2: banco de dados + GPS offline + tela principal)
 ==========================================================================
 
-OBJETIVO DESTA ENTREGA
-Confirmar que o GitHub gera o APK. A tela é provisória: relógio ao vivo,
-botão com pulso e alternância de tema claro/escuro. O registro de ponto
-real entra na Entrega 2.
+NOVIDADES DA V2
+- Botões ENTRADA e SAÍDA (você escolhe). O botão "esperado" emite ondas.
+- Registro salvo no celular (SQLite), 100% offline.
+- GPS capturado em segundo plano, sem bloquear o ponto (até 30 s).
+  Sem sinal: o ponto é salvo com "Localização indisponível".
+- Endereço por extenso preenchido automaticamente quando houver internet.
+- Cartão de status: turno em andamento com contador animado, ou duração
+  do último turno (turno que passa da meia-noite é contado como um só).
+- Texto animado: verde = sucesso, amarelo = aviso, vermelho = erro.
+- Últimos 6 registros na tela principal.
+- Tema claro/escuro agora fica salvo.
+- Chave de assinatura FIXA (app/pontosvoith.jks): a partir da V2, as
+  próximas versões instalam POR CIMA sem perder os registros.
 
-PASSO A PASSO
-1. Extraia o .zip no PC. Você verá: .github, app, docs, build.gradle.kts,
-   settings.gradle.kts, gradle.properties, .gitignore, LEIAME.txt.
-2. Abra https://github.com/Champz123/pontos-voith
-3. Clique em "uploading an existing file" (ou Add file > Upload files).
-4. Selecione TODO o conteúdo de DENTRO da pasta extraída (inclusive a pasta
-   .github) e arraste para a página. Não arraste a pasta-mãe.
-5. Em "Commit changes", clique no botão verde.
-6. Confira se a pasta .github/workflows/build.yml aparece no repositório.
-   Se ela não subiu: Add file > Create new file, nome:
-   .github/workflows/build.yml e cole o conteúdo do arquivo.
-7. Vá na aba "Actions". O build "Build APK" inicia sozinho (cerca de 5 a
-   10 min). Se não iniciar: Build APK > Run workflow.
-8. Com o ícone verde, abra o build > Artifacts > PontosVoith-APK (baixa um
-   .zip com o APK).
-9. Passe o APK para o celular, permita "Instalar apps desconhecidos" e
-   instale.
+COMO SUBIR NO GITHUB
+1. Extraia o .zip.
+2. No repositório: Add file > Upload files.
+3. Arraste as pastas "app" e ".github" inteiras (e "docs", opcional).
+   Se o Windows ocultar a pasta .github, basta editar o build.yml no
+   GitHub e colar o conteúdo do arquivo .github/workflows/build.yml.
+4. Commit changes. O build roda sozinho (aba Actions).
 
-SE DER ERRO (X vermelho)
-Abra o build > clique na etapa vermelha > copie as últimas linhas do erro
-e me envie. Eu corrijo e gero a V1.1.
+INSTALAÇÃO (SOMENTE NESTA VEZ)
+- DESINSTALE a V1 antes de instalar a V2 (a assinatura mudou).
+  A V1 não guardava dados, então nada é perdido.
 
-O QUE VALIDAR NO CELULAR
-[ ] App instala e abre com o nome "Pontos Voith"
-[ ] Ícone azul com o V e a faixa PONTO
-[ ] Relógio atualizando a cada segundo
-[ ] Botão "Tema escuro / Tema claro" funcionando
+TESTES SUGERIDOS
+[ ] Ao abrir, o app pede permissão de localização
+[ ] ENTRADA -> texto verde, cartão "Turno em andamento" com contador
+[ ] Registro aparece em "Últimos registros" com "Obtendo localização…"
+    e depois as coordenadas
+[ ] SAÍDA -> cartão mostra "Último turno: Xh YYmin"
+[ ] Duas ENTRADAS seguidas -> texto amarelo de aviso
+[ ] Modo avião -> ponto salvo normalmente (GPS ainda funciona ao ar livre)
+[ ] Fechar e abrir o app -> registros e tema continuam lá
+
+Obs.: os registros de teste poderão ser editados/excluídos na Entrega 3
+(Histórico).
