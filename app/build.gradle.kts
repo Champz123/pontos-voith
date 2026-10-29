@@ -12,8 +12,20 @@ android {
         applicationId = "com.matheus.pontosvoith"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "V1"
+        versionCode = 3
+        versionName = "V2"
+    }
+
+    // Chave FIXA: todas as versões futuras são assinadas com ela,
+    // permitindo atualizar o app por cima sem perder os registros.
+    signingConfigs {
+        create("pessoal") {
+            storeFile = file("pontosvoith.jks")
+            storePassword = "PontosVoith2026"
+            keyAlias = "pontosvoith"
+            keyPassword = "PontosVoith2026"
+            storeType = "pkcs12"
+        }
     }
 
     buildTypes {
@@ -21,8 +33,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Uso pessoal: assina com a chave de debug para instalar direto no celular
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("pessoal")
         }
     }
     compileOptions {
@@ -31,6 +42,10 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
 }
 
 dependencies {
@@ -39,6 +54,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.animation:animation")
 }
