@@ -1,0 +1,36 @@
+==========================================================================
+ PONTOS VOITH – V1 (ENTREGA 1: projeto mínimo + build + ícone)
+==========================================================================
+
+OBJETIVO DESTA ENTREGA
+Confirmar que o GitHub gera o APK. A tela é provisória: relógio ao vivo,
+botão com pulso e alternância de tema claro/escuro. O registro de ponto
+real entra na Entrega 2.
+
+PASSO A PASSO
+1. Extraia o .zip no PC. Você verá: .github, app, docs, build.gradle.kts,
+   settings.gradle.kts, gradle.properties, .gitignore, LEIAME.txt.
+2. Abra https://github.com/Champz123/pontos-voith
+3. Clique em "uploading an existing file" (ou Add file > Upload files).
+4. Selecione TODO o conteúdo de DENTRO da pasta extraída (inclusive a pasta
+   .github) e arraste para a página. Não arraste a pasta-mãe.
+5. Em "Commit changes", clique no botão verde.
+6. Confira se a pasta .github/workflows/build.yml aparece no repositório.
+   Se ela não subiu: Add file > Create new file, nome:
+   .github/workflows/build.yml e cole o conteúdo do arquivo.
+7. Vá na aba "Actions". O build "Build APK" inicia sozinho (cerca de 5 a
+   10 min). Se não iniciar: Build APK > Run workflow.
+8. Com o ícone verde, abra o build > Artifacts > PontosVoith-APK (baixa um
+   .zip com o APK).
+9. Passe o APK para o celular, permita "Instalar apps desconhecidos" e
+   instale.
+
+SE DER ERRO (X vermelho)
+Abra o build > clique na etapa vermelha > copie as últimas linhas do erro
+e me envie. Eu corrijo e gero a V1.1.
+
+O QUE VALIDAR NO CELULAR
+[ ] App instala e abre com o nome "Pontos Voith"
+[ ] Ícone azul com o V e a faixa PONTO
+[ ] Relógio atualizando a cada segundo
+[ ] Botão "Tema escuro / Tema claro" funcionando
