@@ -1,0 +1,244 @@
+==========================================================================
+ QUESTIONÁRIO – APP MOBILE DE REGISTRO DE PONTO (USO PESSOAL)
+ Versão: V1
+==========================================================================
+
+COMO RESPONDER:
+- Escreva sua resposta após "R:" em cada pergunta.
+- Quando houver opções (a, b, c...), pode indicar só a letra ou mais de uma.
+- Se não souber ou não tiver preferência, escreva "tanto faz" e eu decido
+  a melhor opção.
+
+--------------------------------------------------------------------------
+ 1. PLATAFORMA E INSTALAÇÃO
+--------------------------------------------------------------------------
+
+1.1 Qual é o sistema do seu celular?
+    a) Android
+    b) iPhone (iOS)
+    c) Ambos
+R:A
+
+1.2 Como prefere que o app seja instalado/entregue?
+    a) PWA – arquivo HTML que você abre no navegador e "Adiciona à tela
+       inicial" (vira ícone, funciona offline, sem loja de apps, mais simples)
+    b) APK nativo para Android (instalação manual, sem Play Store)
+    c) Não sei / recomende a melhor opção
+R:B
+
+1.3 Você tem onde hospedar o app (ex.: GitHub Pages, OneDrive, servidor
+    próprio) ou prefere apenas um arquivo local no celular?
+R:Prefiro um local no celular, porém o mais compacto possível
+
+1.4 O app precisa funcionar 100% offline (sem internet)?
+    a) Sim
+    b) Não, sempre terei internet
+R:Considere 100% Offline, porém vou querer funções por exemplo, mandar dados para email X, aí nesse caso precisaria de internet, fora Essas funções específicas, bater ponto e visualizar historico tem que ser 100% offline.
+
+--------------------------------------------------------------------------
+ 2. REGRAS DO REGISTRO DE PONTO
+--------------------------------------------------------------------------
+
+2.1 Quais marcações você quer registrar por dia?
+    a) Apenas Entrada e Saída
+    b) Entrada, Saída almoço, Retorno almoço, Saída
+    c) Marcações livres (quantas quiser, alternando entrada/saída)
+    d) Outro (descreva)
+R:A
+
+2.2 O tipo da marcação deve ser:
+    a) Automático (o app sabe que a próxima é "Saída", por exemplo)
+    b) Escolhido por mim a cada batida
+R:B
+
+2.3 Qual é sua jornada padrão (ex.: 08:00 às 17:30, 9h30/dia, 1h almoço)?
+R:Não tem jornada padrão, pois há trabalhos noturnos, diurnos, horas adicionais. Faça como achar melhor considerando essas informações.
+
+2.4 Devo calcular automaticamente horas trabalhadas, horas extras,
+    saldo/banco de horas?
+    a) Sim, tudo
+    b) Somente horas trabalhadas no dia
+    c) Não, apenas registrar os horários
+R:C, por hora vamos apenas registrar, posteriormente vou querer uma integração com esses calculos.
+
+2.5 Se houver cálculo de extras, devo seguir as mesmas regras do seu
+    "Controle Horas Extras"? (ex.: horas noturnas, sábado, domingo e
+    feriados separadas das horas normais)
+    a) Sim, mesmas regras
+    b) Não, regras diferentes (descreva)
+R:Por hora vamos apenas registrar, posteriormente vou querer uma integração com esses calculos.
+
+2.6 Qual o horário considerado noturno? (ex.: 22:00 às 05:00)
+R: Definimos depois
+
+2.7 Devo considerar feriados (nacionais / estaduais RJ ou SP / municipais)?
+R: Definimos depois
+
+2.8 E quando um turno passa da meia-noite (ex.: entra 20:00, sai 03:00)?
+    a) Conta tudo no dia de entrada
+    b) Divide entre os dois dias
+R: Não entendi as respostas, deve considerar a entrada as 20:00 e a saída as 03:00
+
+--------------------------------------------------------------------------
+ 3. INFORMAÇÕES EXTRAS EM CADA REGISTRO
+--------------------------------------------------------------------------
+
+3.1 Além de data e hora, quer registrar algo mais? (marque todos)
+    a) Localização GPS (endereço/coordenadas da batida)
+    b) Projeto / PEP / Obra (ex.: UG5, comissionamento)
+    c) Observação/comentário livre
+    d) Foto (selfie ou local)
+    e) Tipo de dia (normal, viagem, campo, home office, folga, atestado)
+    f) Nenhum, só data e hora
+R:A, se possível offline
+
+3.2 Se escolheu Projeto/PEP: quer uma lista fixa cadastrada no app para
+    selecionar rapidamente? Quais itens iniciais?
+R:N/A
+
+3.3 Devo permitir editar ou excluir uma batida depois de registrada
+    (ex.: esqueci de bater)?
+    a) Sim, livremente
+    b) Sim, mas marcando como "ajustado manualmente" (histórico)
+    c) Não permitir edição
+R:B
+
+3.4 Devo permitir incluir batidas manuais retroativas (dias passados)?
+R:Sim, porém indicar no historico
+
+--------------------------------------------------------------------------
+ 4. ARMAZENAMENTO E BACKUP
+--------------------------------------------------------------------------
+
+4.1 Onde os dados devem ficar?
+    a) Somente no celular (local)
+    b) No celular + backup em nuvem (OneDrive / Google Drive)
+    c) Sincronizado com um banco online
+R:A
+
+4.2 Como quer exportar os dados?
+    a) Excel (.xlsx)
+    b) CSV
+    c) PDF (relatório mensal)
+    d) JSON (backup/restauração)
+    e) Vários (indique quais)
+R:e, Excel e PDF para dados, e um arquivo de Backup caso troca de celular
+
+4.3 A exportação em Excel deve ter o mesmo layout aceito pela importação
+    do seu "Controle Horas Extras"? Se sim, envie um exemplo da planilha
+    que hoje você importa nele.
+R:Definimos depois
+
+4.4 Quer função de restaurar backup (ao trocar de celular, por exemplo)?
+R:Sim
+
+--------------------------------------------------------------------------
+ 5. TELAS E FUNCIONALIDADES
+--------------------------------------------------------------------------
+
+5.1 Quais telas você imagina? (marque todas)
+    a) Tela principal com botão grande "Bater Ponto" + relógio ao vivo
+    b) Histórico do dia
+    c) Histórico por mês / calendário
+    d) Dashboard com resumo (horas do mês, extras, saldo)
+    e) Gráficos
+    f) Configurações (jornada, regras, temas)
+    g) Outras (descreva)
+R:Todas as opções acima
+
+5.2 Quer lembretes/notificações? (ex.: "Hora de bater a saída", "Você
+    esqueceu de bater o retorno do almoço")
+    a) Sim (indique horários)
+    b) Não
+R:Não, uma coisa importante, é que não vou bater ponto de almoço/retorno de almoço, somente entrada e saída
+
+5.3 Quer proteção de acesso ao abrir o app?
+    a) Nenhuma
+    b) Senha / PIN
+    c) Biometria (digital/rosto) – funciona melhor em app nativo
+R:A
+
+5.4 Deseja ocultar valores sensíveis (ex.: valor a receber) com o ícone
+    de olho e senha, como no Controle Horas Extras?
+R:Por hora não
+
+5.5 Quer que o app calcule valores em R$ (salário/hora, valor das extras)?
+R:Por hora não
+
+5.6 Atalho rápido: quer bater ponto sem abrir o app completo
+    (ex.: widget na tela inicial)? Obs.: widget exige app nativo.
+R:Sim, seria muito bom
+
+--------------------------------------------------------------------------
+ 6. VISUAL E ANIMAÇÕES
+--------------------------------------------------------------------------
+
+6.1 Tema preferido:
+    a) Escuro
+    b) Claro
+    c) Ambos com botão para alternar
+R:C
+
+6.2 Cores principais / identidade visual (ex.: azul e branco, preto e
+    neon, cores da empresa)?
+R:Azul e Branco, e o tema escuro como Azul e preto
+
+6.3 Que tipo de animações você quer? (marque todas)
+    a) Botão de bater ponto com efeito (pulso, onda, preenchimento)
+    b) Confirmação animada após batida (check, confete, vibração)
+    c) Transições suaves entre telas
+    d) Relógio/contador animado de horas trabalhadas no dia
+    e) Gráficos animados
+    f) Vibração (feedback tátil) ao bater ponto
+    g) Outras (descreva)
+R:Todas opções acima, com excessão da vibração e as confimações animadas com confete ou vibração, apenas um texto abaixo animando se deu certo ou não
+
+6.4 Intensidade das animações:
+    a) Sutis e profissionais
+    b) Moderadas
+    c) Bem chamativas
+R:B
+
+6.5 Tem alguma imagem/app de referência visual? Se sim, anexe junto
+    com este arquivo.
+R:Não tenho
+
+6.6 Qual nome você quer para o app? (aparece no ícone)
+R:Pontos Voith
+
+6.7 Quer que eu gere um ícone para o app?
+R:Sim, tente pegar a logo do V da Voith, e coloque uma faixa sutil escrita Ponto
+
+--------------------------------------------------------------------------
+ 7. INTEGRAÇÃO COM SEUS OUTROS APPS
+--------------------------------------------------------------------------
+
+7.1 Deseja que este app futuramente seja integrado ao "MenuGeral"
+    (junto com Controle Horas Extras, Dashboard Financeiro e Controle
+    de Despesas)?
+    a) Sim
+    b) Não, deve ser independente
+R:B
+
+7.2 Os registros de ponto devem alimentar automaticamente o Controle
+    Horas Extras (via arquivo exportado/importado)?
+R:Não
+
+--------------------------------------------------------------------------
+ 8. OUTROS
+--------------------------------------------------------------------------
+
+8.1 Existe alguma regra da empresa ou do trabalho de campo que eu deva
+    considerar (ex.: tolerância de 10 min, sobreaviso, deslocamento,
+    diárias)?
+R:Não
+
+8.2 Algo que você NÃO quer de jeito nenhum no app?
+R:baixa performance, tem que ser simples com boas animações e funcional.
+
+8.3 Comentários livres / ideias adicionais:
+R:
+
+==========================================================================
+ FIM DO QUESTIONÁRIO – Devolva este arquivo respondido.
+==========================================================================

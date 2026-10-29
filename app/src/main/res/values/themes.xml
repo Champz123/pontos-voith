@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.PontosVoith" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/voith_blue</item>
+        <item name="android:windowBackground">@color/white</item>
+    </style>
+</resources>
