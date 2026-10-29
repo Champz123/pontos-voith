@@ -7,11 +7,29 @@ on:
 
 jobs:
   build:
-    # Versão fixa do Ubuntu (evita surpresas com a migração do ubuntu-latest)
     runs-on: ubuntu-24.04
     steps:
       - name: Baixar código
         uses: actions/checkout@v5
+
+      - name: Verificar estrutura do projeto
+        run: |
+          FALTANDO=0
+          for f in settings.gradle.kts build.gradle.kts gradle.properties \
+                   app/build.gradle.kts app/pontosvoith.jks \
+                   app/src/main/AndroidManifest.xml \
+                   app/src/main/java/com/matheus/pontosvoith/MainActivity.kt \
+                   app/src/main/java/com/matheus/pontosvoith/PontosApp.kt \
+                   app/src/main/java/com/matheus/pontosvoith/dados/Repositorio.kt \
+                   app/src/main/java/com/matheus/pontosvoith/ui/TelaPrincipal.kt \
+                   app/src/main/res/mipmap-hdpi/ic_launcher.png; do
+            if [ ! -f "$f" ]; then echo "::error::FALTANDO: $f"; FALTANDO=1; fi
+          done
+          if [ "$FALTANDO" = "1" ]; then
+            echo "::error::Arquivos faltando. Envie novamente a pasta app completa."
+            exit 1
+          fi
+          echo "Estrutura OK"
 
       - name: Instalar JDK 17
         uses: actions/setup-java@v5
@@ -24,13 +42,11 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      # O Android SDK já vem instalado no runner do GitHub (ANDROID_HOME).
-      # A etapa "setup-android" foi removida: era a causa do erro na V1.
       - name: Aceitar licenças do Android SDK
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - name: Compilar APK (release)
-        run: gradle assembleRelease --no-daemon --stacktrace
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
 
       - name: Renomear APK
         run: |
