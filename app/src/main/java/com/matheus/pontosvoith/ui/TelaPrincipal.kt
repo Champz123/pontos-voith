@@ -4,7 +4,11 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,6 +50,7 @@ fun TelaPrincipal(
     val ctx = LocalContext.current
     val escopo = rememberCoroutineScope()
     val cs = MaterialTheme.colorScheme
+    val versao by Repositorio.versao.collectAsState()
 
     val estado = remember(turnos, todas) { calcularEstado(turnos, todas) }
     val recentes = remember(todas) { todas.asReversed().take(6) }
@@ -73,6 +80,26 @@ fun TelaPrincipal(
     var confirmarSegundaEntrada by remember { mutableStateOf(false) }
     var confirmarSaidaSemEntrada by remember { mutableStateOf(false) }
 
+    // V6: almoço (relido sempre que algo muda — o widget também pode marcar/desmarcar)
+    var almoco by remember(versao) { mutableStateOf(Preferencias.almoco(ctx)) }
+    var avisoAlmoco by remember { mutableStateOf(false) }
+
+    // V6: desfazer a última batida
+    var paraDesfazer by remember { mutableStateOf<Batida?>(null) }
+    LaunchedEffect(paraDesfazer) {
+        val alvo = paraDesfazer ?: return@LaunchedEffect
+        delay(Repositorio.JANELA_DESFAZER_MS)
+        if (paraDesfazer?.id == alvo.id) paraDesfazer = null
+    }
+
+    fun alterarAlmoco(novo: Boolean) {
+        Preferencias.salvarAlmoco(ctx, novo)
+        almoco = novo
+        Repositorio.notificar() // atualiza o widget
+        if (novo) avisoAlmoco = true
+        else mensagem = Mensagem(TipoMensagem.OK, "Desconto de almoço desativado")
+    }
+
     fun baterPonto(tipo: String) {
         if (registrando) return
         registrando = true
@@ -81,19 +108,34 @@ fun TelaPrincipal(
             try {
                 val b = Repositorio.registrar(tipo)
                 val hora = b.dataHora.formatar(FMT_HORA)
+                val sufixo = if (b.tipo == TipoBatida.SAIDA && b.almoco) " (−1h de almoço)" else ""
                 mensagem = when {
                     tipo == TipoBatida.ENTRADA && havia ->
                         Mensagem(TipoMensagem.AVISO, "Entrada registrada às $hora. A entrada anterior ficou sem saída.")
                     tipo == TipoBatida.SAIDA && !havia ->
                         Mensagem(TipoMensagem.AVISO, "Saída registrada às $hora sem entrada aberta.")
                     tipo == TipoBatida.ENTRADA -> Mensagem(TipoMensagem.OK, "Entrada registrada às $hora")
-                    else -> Mensagem(TipoMensagem.OK, "Saída registrada às $hora")
+                    else -> Mensagem(TipoMensagem.OK, "Saída registrada às $hora$sufixo")
                 }
+                paraDesfazer = b
             } catch (e: Exception) {
                 mensagem = Mensagem(TipoMensagem.ERRO, "Falha ao registrar: ${e.message ?: "erro desconhecido"}")
             } finally {
                 delay(1200)
                 registrando = false
+            }
+        }
+    }
+
+    fun desfazer() {
+        val alvo = paraDesfazer ?: return
+        paraDesfazer = null
+        escopo.launch {
+            val r = Repositorio.desfazer(alvo.id)
+            mensagem = if (r != null) {
+                Mensagem(TipoMensagem.OK, "${nomeTipo(r.tipo)} das ${r.dataHora.formatar(FMT_HORA)} desfeita")
+            } else {
+                Mensagem(TipoMensagem.ERRO, "Não foi possível desfazer: tempo esgotado")
             }
         }
     }
@@ -123,16 +165,28 @@ fun TelaPrincipal(
             val proximo = if (estado.abertoDesde == null) TipoBatida.ENTRADA else TipoBatida.SAIDA
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 BotaoPonto("ENTRADA", cs.primary, proximo == TipoBatida.ENTRADA, !registrando) {
-                    // Aviso ANTES de registrar uma 2ª entrada
                     if (estado.abertoDesde != null) confirmarSegundaEntrada = true
                     else baterPonto(TipoBatida.ENTRADA)
                 }
                 BotaoPonto("SAÍDA", VoithNavy, proximo == TipoBatida.SAIDA, !registrando) {
-                    // Aviso ANTES de registrar saída sem entrada aberta
                     if (estado.abertoDesde == null) confirmarSaidaSemEntrada = true
                     else baterPonto(TipoBatida.SAIDA)
                 }
             }
+
+            // V6: caixa de almoço logo abaixo dos botões
+            Spacer(Modifier.height(4.dp))
+            CaixaAlmoco(almoco) { alterarAlmoco(it) }
+
+            // V6: barra de desfazer (10 s)
+            AnimatedContent(
+                targetState = paraDesfazer,
+                transitionSpec = { (fadeIn(tween(250)) + expandVertically(tween(250))) togetherWith (fadeOut(tween(200)) + shrinkVertically(tween(200))) },
+                label = "desfazer"
+            ) { b ->
+                if (b != null) BarraDesfazer(b) { desfazer() } else Spacer(Modifier.fillMaxWidth().height(0.dp))
+            }
+
             MensagemAnimada(mensagem)
 
             if (gpsAtivo && !temPermissao) {
@@ -160,6 +214,26 @@ fun TelaPrincipal(
                 fontSize = 11.sp, color = cs.onBackground.copy(alpha = 0.45f), textAlign = TextAlign.Center
             )
         }
+    }
+
+    // ------------------------------------------------ aviso: almoço ativado
+    if (avisoAlmoco) {
+        AlertDialog(
+            onDismissRequest = { avisoAlmoco = false },
+            icon = { Text("!", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = CorAviso) },
+            title = { Text("Desconto de almoço ativado") },
+            text = {
+                Text(
+                    "Ao registrar a próxima SAÍDA, 1h de almoço será descontada das horas trabalhadas deste turno.\n\n" +
+                        "Exemplo: 08:00 → 17:00 passa a contar 8h 00min (em vez de 9h 00min).\n\n" +
+                        "A caixa é desmarcada automaticamente depois da saída. Se desmarcar antes, nada é descontado."
+                )
+            },
+            confirmButton = { TextButton(onClick = { avisoAlmoco = false }) { Text("Entendi") } },
+            dismissButton = {
+                TextButton(onClick = { avisoAlmoco = false; alterarAlmoco(false) }) { Text("Desmarcar") }
+            }
+        )
     }
 
     // ------------------------------------------------ aviso de 2ª entrada
@@ -213,6 +287,65 @@ fun TelaPrincipal(
     }
 }
 
+/** V6: caixa "Almoço de 1h neste turno". */
+@Composable
+private fun CaixaAlmoco(marcado: Boolean, onMudar: (Boolean) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val forma = RoundedCornerShape(14.dp)
+    val borda by animateColorAsState(if (marcado) CorAviso else Color.Transparent, tween(250), label = "bordaAlmoco")
+    Card(
+        Modifier
+            .fillMaxWidth()
+            .clip(forma)
+            .border(1.5.dp, borda, forma)
+            .clickable { onMudar(!marcado) },
+        shape = forma,
+        colors = CardDefaults.cardColors(containerColor = cs.surface)
+    ) {
+        Row(Modifier.padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = marcado, onCheckedChange = onMudar)
+            Column(Modifier.weight(1f)) {
+                Text("Almoço de 1h neste turno", fontWeight = FontWeight.SemiBold, color = cs.onSurface, fontSize = 14.sp)
+                Text(
+                    if (marcado) "Ativado: 1h será descontada ao registrar a SAÍDA"
+                    else "Desmarcado: conta exatamente Entrada → Saída",
+                    fontSize = 12.sp,
+                    color = if (marcado) CorAviso else cs.onSurface.copy(alpha = 0.65f)
+                )
+            }
+            AnimatedVisibility(visible = marcado, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
+                Text("−1h", color = CorAviso, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
+            }
+        }
+    }
+}
+
+/** V6: barra com contagem regressiva para desfazer a última batida. */
+@Composable
+private fun BarraDesfazer(b: Batida, onDesfazer: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val prog = remember(b.id) { Animatable(1f) }
+    LaunchedEffect(b.id) {
+        prog.animateTo(0f, tween(Repositorio.JANELA_DESFAZER_MS.toInt(), easing = LinearEasing))
+    }
+    Card(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = cs.primary.copy(alpha = 0.12f))
+    ) {
+        Column {
+            Row(Modifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${nomeTipo(b.tipo)} das ${b.dataHora.formatar(FMT_HORA)} registrada",
+                    Modifier.weight(1f), fontSize = 13.sp, color = cs.onSurface
+                )
+                TextButton(onClick = onDesfazer) { Text("↶ DESFAZER", fontWeight = FontWeight.Bold) }
+            }
+            LinearProgressIndicator(progress = { prog.value }, modifier = Modifier.fillMaxWidth().height(3.dp))
+        }
+    }
+}
+
 @Composable
 private fun CartaoStatus(estado: EstadoTurno, agora: Long) {
     val cs = MaterialTheme.colorScheme
@@ -252,7 +385,8 @@ private fun CartaoStatus(estado: EstadoTurno, agora: Long) {
                         Text("Último turno: ${duracaoTexto(t.duracaoMs)}", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = cs.onSurface)
                         Text(
                             "${ini.dataHora.formatar(FMT_DIA_CURTO)} ${ini.dataHora.formatar(FMT_HM)}  →  " +
-                                "${fim.dataHora.formatar(FMT_DIA_CURTO)} ${fim.dataHora.formatar(FMT_HM)}",
+                                "${fim.dataHora.formatar(FMT_DIA_CURTO)} ${fim.dataHora.formatar(FMT_HM)}" +
+                                if (t.temAlmoco) "  (−1h almoço)" else "",
                             fontSize = 13.sp, color = cs.onSurface.copy(alpha = 0.7f)
                         )
                     } else {

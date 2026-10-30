@@ -36,6 +36,7 @@ import com.matheus.pontosvoith.dados.Turno
 import com.matheus.pontosvoith.dados.paraData
 import com.matheus.pontosvoith.exportar.Arquivos
 import com.matheus.pontosvoith.exportar.Backup
+import com.matheus.pontosvoith.exportar.BackupAuto
 import com.matheus.pontosvoith.exportar.ExportarExcel
 import com.matheus.pontosvoith.exportar.ExportarPdf
 import com.matheus.pontosvoith.exportar.F_ARQ_HORA
@@ -59,12 +60,52 @@ fun TelaAjustes(escuro: Boolean, onTema: (Boolean) -> Unit, todas: List<Batida>,
     val ctx = LocalContext.current
     val cs = MaterialTheme.colorScheme
     val escopo = rememberCoroutineScope()
+    val versao by Repositorio.versao.collectAsState()
     var gps by remember { mutableStateOf(Preferencias.gpsAtivo(ctx)) }
     var email by remember { mutableStateOf(Preferencias.email(ctx)) }
     var ultimoBackup by remember { mutableLongStateOf(Preferencias.ultimoBackup(ctx)) }
     var mensagem by rememberMensagem()
     var ocupado by remember { mutableStateOf(false) }
     val temPermissao = remember { Localizacao.temPermissao(ctx) }
+
+    // ---------------- V6: lixeira
+    var lixeira by remember { mutableStateOf<List<Batida>>(emptyList()) }
+    LaunchedEffect(versao) { lixeira = Repositorio.lixeira() }
+    var mostrarLixeira by remember { mutableStateOf(false) }
+
+    // ---------------- V6: backup automático
+    var pastaAuto by remember { mutableStateOf(BackupAuto.nomePasta(ctx)) }
+    var autoAtivo by remember { mutableStateOf(Preferencias.backupAutoAtivo(ctx)) }
+    var ultimoAuto by remember { mutableLongStateOf(Preferencias.ultimoBackupAuto(ctx)) }
+    var erroAuto by remember { mutableStateOf(Preferencias.erroBackupAuto(ctx)) }
+
+    fun backupAutoAgora() {
+        if (ocupado) return
+        ocupado = true
+        escopo.launch {
+            val r = BackupAuto.executarAgora(ctx)
+            ultimoAuto = Preferencias.ultimoBackupAuto(ctx)
+            erroAuto = Preferencias.erroBackupAuto(ctx)
+            mensagem = r.fold(
+                { Mensagem(TipoMensagem.OK, "Backup salvo na pasta: $it") },
+                { Mensagem(TipoMensagem.ERRO, "Falha no backup: ${it.message ?: "erro"}") }
+            )
+            ocupado = false
+        }
+    }
+
+    val escolherPasta = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            runCatching {
+                ctx.contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }
+            Preferencias.salvarPastaBackupAuto(ctx, uri.toString())
+            pastaAuto = BackupAuto.nomePasta(ctx)
+            backupAutoAgora() // primeiro backup já na escolha da pasta
+        }
+    }
 
     // ---------------- período
     var tipoPeriodo by rememberSaveable { mutableStateOf(TipoPeriodo.MES) }
@@ -131,7 +172,6 @@ fun TelaAjustes(escuro: Boolean, onTema: (Boolean) -> Unit, todas: List<Batida>,
         }
     }
 
-    /** Gera os bytes em segundo plano e executa a ação (salvar/enviar). */
     fun gerar(tipo: String, enviar: Boolean) {
         if (ocupado) return
         ocupado = true
@@ -182,6 +222,8 @@ fun TelaAjustes(escuro: Boolean, onTema: (Boolean) -> Unit, todas: List<Batida>,
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
         Text("Ajustes", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = cs.primary)
+        MensagemAnimada(mensagem)
+        if (ocupado) LinearProgressIndicator(Modifier.fillMaxWidth())
 
         // ===================================================== EXPORTAR
         TituloSecao("Exportar relatório (Excel / PDF)")
@@ -231,19 +273,49 @@ fun TelaAjustes(escuro: Boolean, onTema: (Boolean) -> Unit, todas: List<Batida>,
             LinhaAcoes("Excel", ocupado, { gerar("xlsx", false) }, { gerar("xlsx", true) })
             Spacer(Modifier.height(6.dp))
             LinhaAcoes("PDF", ocupado, { gerar("pdf", false) }, { gerar("pdf", true) })
-            if (ocupado) {
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
         }
-        MensagemAnimada(mensagem)
 
-        // ===================================================== BACKUP
-        TituloSecao("Backup (troca de celular)")
+        // ===================================================== V6: BACKUP AUTOMÁTICO
+        TituloSecao("Backup automático (semanal)")
         CartaoBase {
             Text(
-                if (ultimoBackup > 0) "Último backup: ${ultimoBackup.formatar(FMT_DIA)} às ${ultimoBackup.formatar(FMT_HM)}"
-                else "Nenhum backup gerado ainda.",
+                if (pastaAuto != null) "Pasta: $pastaAuto" else "Nenhuma pasta escolhida",
+                fontWeight = FontWeight.Medium, color = if (pastaAuto != null) cs.onSurface else CorAviso
+            )
+            Text(
+                if (ultimoAuto > 0) "Último automático: ${ultimoAuto.formatar(FMT_DIA)} às ${ultimoAuto.formatar(FMT_HM)}"
+                else "Ainda não executado",
+                fontSize = 13.sp, color = cs.onSurface.copy(alpha = 0.75f)
+            )
+            erroAuto?.let { Text("Último erro: $it", fontSize = 12.sp, color = CorErro) }
+            Text(
+                "Roda sozinho a cada 7 dias, quando você abre o app ou bate o ponto. Guarda os 8 mais recentes " +
+                    "(arquivos PontosVoith_auto_…). Para proteger contra perda do celular, escolha uma pasta " +
+                    "sincronizada com a nuvem ou um cartão SD.",
+                fontSize = 12.sp, color = cs.onSurface.copy(alpha = 0.65f)
+            )
+            Spacer(Modifier.height(6.dp))
+            LinhaSwitch("Ativado", "Gerar backup semanal automaticamente", autoAtivo) {
+                autoAtivo = it
+                Preferencias.salvarBackupAutoAtivo(ctx, it)
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { escolherPasta.launch(null) }, Modifier.weight(1f), enabled = !ocupado) {
+                    Text(if (pastaAuto == null) "Escolher pasta" else "Trocar pasta")
+                }
+                Button(onClick = { backupAutoAgora() }, Modifier.weight(1f), enabled = pastaAuto != null && !ocupado) {
+                    Text("Fazer agora")
+                }
+            }
+        }
+
+        // ===================================================== BACKUP MANUAL
+        TituloSecao("Backup manual (troca de celular)")
+        CartaoBase {
+            Text(
+                if (ultimoBackup > 0) "Último backup manual: ${ultimoBackup.formatar(FMT_DIA)} às ${ultimoBackup.formatar(FMT_HM)}"
+                else "Nenhum backup manual gerado ainda.",
                 fontSize = 13.sp, color = if (ultimoBackup > 0) cs.onSurface.copy(alpha = 0.75f) else CorAviso
             )
             Text(
@@ -257,6 +329,20 @@ fun TelaAjustes(escuro: Boolean, onTema: (Boolean) -> Unit, todas: List<Batida>,
                 onClick = { abrirBackup.launch(arrayOf("application/json", "application/octet-stream", "text/plain", "*/*")) },
                 modifier = Modifier.fillMaxWidth(), enabled = !ocupado
             ) { Text("Restaurar backup…") }
+        }
+
+        // ===================================================== V6: LIXEIRA
+        TituloSecao("Lixeira")
+        CartaoBase {
+            Text(
+                if (lixeira.isEmpty()) "A lixeira está vazia."
+                else "${lixeira.size} registro(s) excluído(s). São apagados de vez após 30 dias.",
+                fontSize = 13.sp, color = cs.onSurface.copy(alpha = 0.75f)
+            )
+            Spacer(Modifier.height(6.dp))
+            OutlinedButton(onClick = { mostrarLixeira = true }, Modifier.fillMaxWidth(), enabled = lixeira.isNotEmpty()) {
+                Text("Abrir lixeira (${lixeira.size})")
+            }
         }
 
         // ===================================================== E-MAIL
@@ -303,6 +389,13 @@ fun TelaAjustes(escuro: Boolean, onTema: (Boolean) -> Unit, todas: List<Batida>,
             }) { Text("Abrir permissões do app") }
         }
 
+        TituloSecao("Atalhos rápidos")
+        CartaoBase {
+            Text("• Widget: segure a tela inicial > Widgets > Pontos Voith.", fontSize = 13.sp, color = cs.onSurface)
+            Text("• Ícone: segure o ícone do app > Entrada / Saída.", fontSize = 13.sp, color = cs.onSurface)
+            Text("• Configurações rápidas: puxe a barra do topo > lápis (editar) > arraste \"Bater ponto\".", fontSize = 13.sp, color = cs.onSurface)
+        }
+
         TituloSecao("Sobre")
         CartaoBase {
             LinhaResumo("Versão") { Text(VERSAO_APP, fontWeight = FontWeight.SemiBold, color = cs.onSurface) }
@@ -312,7 +405,28 @@ fun TelaAjustes(escuro: Boolean, onTema: (Boolean) -> Unit, todas: List<Batida>,
         Spacer(Modifier.height(16.dp))
     }
 
-    // ===================================================== diálogo de restauração
+    // ===================================================== diálogos
+    if (mostrarLixeira) {
+        DialogoLixeira(
+            itens = lixeira,
+            onFechar = { mostrarLixeira = false },
+            onRestaurar = { ids ->
+                escopo.launch {
+                    val n = Repositorio.restaurarDaLixeira(ids)
+                    mensagem = Mensagem(TipoMensagem.OK, "$n registro(s) restaurado(s)")
+                    if (n >= lixeira.size) mostrarLixeira = false
+                }
+            },
+            onEsvaziar = {
+                mostrarLixeira = false
+                escopo.launch {
+                    val n = Repositorio.esvaziarLixeira()
+                    mensagem = Mensagem(TipoMensagem.OK, "$n registro(s) apagado(s) definitivamente")
+                }
+            }
+        )
+    }
+
     backupLido?.let { b ->
         DialogoRestaurar(
             conteudo = b,
@@ -373,12 +487,12 @@ private fun DialogoRestaurar(
                 OpcaoRadio("Mesclar (recomendado)", "Adiciona apenas os registros que não existem aqui.", !substituir) {
                     substituir = false
                 }
-                OpcaoRadio("Substituir tudo", "Apaga os $atuais registros atuais e usa só os do backup.", substituir) {
+                OpcaoRadio("Substituir tudo", "Move os $atuais registros atuais para a Lixeira e usa só os do backup.", substituir) {
                     substituir = true
                 }
                 if (substituir) {
                     Spacer(Modifier.height(8.dp))
-                    Text("⚠ Os registros atuais serão apagados definitivamente.", fontSize = 13.sp, color = CorErro)
+                    Text("⚠ Os registros atuais irão para a Lixeira (restauráveis por 30 dias).", fontSize = 13.sp, color = CorErro)
                     Row(Modifier.fillMaxWidth().clickable { entendi = !entendi }, verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = entendi, onCheckedChange = { entendi = it })
                         Text("Entendo e quero substituir", fontSize = 14.sp, color = cs.onSurface)

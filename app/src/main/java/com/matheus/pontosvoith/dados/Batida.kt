@@ -5,6 +5,9 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 
+/** Desconto de almoço (1 hora). */
+const val ALMOCO_MS = 3_600_000L
+
 object TipoBatida {
     const val ENTRADA = "ENTRADA"
     const val SAIDA = "SAIDA"
@@ -38,7 +41,11 @@ data class Batida(
     val dataAjuste: Long?,
     val valorOriginal: Long?,
     val obsAjuste: String?,
-    val criadoEm: Long
+    val criadoEm: Long,
+    /** V6: só vale na SAÍDA. true = desconta 1h de almoço do turno. */
+    val almoco: Boolean = false,
+    /** V6: preenchido quando o registro está na Lixeira. */
+    val excluidoEm: Long? = null
 ) {
     val retroativa: Boolean get() = origem == Origem.RETROATIVA
     val entrada: Boolean get() = tipo == TipoBatida.ENTRADA
@@ -53,12 +60,24 @@ data class Turno(val entrada: Batida?, val saida: Batida?, val emAndamento: Bool
     val completo: Boolean get() = entrada != null && saida != null
     val incompleto: Boolean get() = !completo && !emAndamento
     val inicio: Long get() = entrada?.dataHora ?: saida?.dataHora ?: 0L
-    val duracaoMs: Long
+
+    /** Saída − Entrada, sem nenhum desconto. */
+    val duracaoBrutaMs: Long
         get() {
             val e = entrada
             val s = saida
-            return if (e != null && s != null) s.dataHora - e.dataHora else 0L
+            return if (e != null && s != null) (s.dataHora - e.dataHora).coerceAtLeast(0) else 0L
         }
+
+    /** true se a SAÍDA foi marcada com almoço de 1h. */
+    val temAlmoco: Boolean get() = completo && saida?.almoco == true
+
+    /** Quanto foi descontado de almoço (nunca deixa o turno negativo). */
+    val descontoAlmocoMs: Long get() = if (temAlmoco) minOf(ALMOCO_MS, duracaoBrutaMs) else 0L
+
+    /** Horas trabalhadas = bruto − almoço (quando marcado). */
+    val duracaoMs: Long get() = duracaoBrutaMs - descontoAlmocoMs
+
     /** O turno pertence ao dia da ENTRADA (ex.: 20:00 -> 03:00 conta no dia da entrada). */
     val dia: LocalDate get() = inicio.paraData()
     val situacao: String
@@ -99,7 +118,7 @@ fun calcularEstado(turnos: List<Turno>, todas: List<Batida>): EstadoTurno = Esta
     ultimaBatida = todas.maxWithOrNull(compareBy({ it.dataHora }, { it.id }))
 )
 
-/** Horas trabalhadas (ms) por dia, somente turnos completos. */
+/** Horas trabalhadas (ms) por dia, somente turnos completos (já com desconto de almoço). */
 fun horasPorDia(turnos: List<Turno>): Map<LocalDate, Long> =
     turnos.filter { it.completo }.groupBy { it.dia }.mapValues { (_, l) -> l.sumOf { it.duracaoMs } }
 

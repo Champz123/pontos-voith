@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_atalho_entrada"
+        android:shortcutId="bater_entrada"
+        android:shortcutLongLabel="@string/atalho_entrada_longo"
+        android:shortcutShortLabel="@string/atalho_entrada">
+        <intent
+            android:action="com.matheus.pontosvoith.BATER"
+            android:targetClass="com.matheus.pontosvoith.widget.WidgetPontoActivity"
+            android:targetPackage="com.matheus.pontosvoith">
+            <extra android:name="tipo" android:value="ENTRADA" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_atalho_saida"
+        android:shortcutId="bater_saida"
+        android:shortcutLongLabel="@string/atalho_saida_longo"
+        android:shortcutShortLabel="@string/atalho_saida">
+        <intent
+            android:action="com.matheus.pontosvoith.BATER"
+            android:targetClass="com.matheus.pontosvoith.widget.WidgetPontoActivity"
+            android:targetPackage="com.matheus.pontosvoith">
+            <extra android:name="tipo" android:value="SAIDA" />
+        </intent>
+    </shortcut>
+</shortcuts>

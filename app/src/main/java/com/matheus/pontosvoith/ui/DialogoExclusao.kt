@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -17,10 +18,7 @@ import com.matheus.pontosvoith.ui.theme.CorAviso
 import com.matheus.pontosvoith.ui.theme.CorErro
 
 /**
- * Confirmação de exclusão (1 ou vários registros), com avisos:
- * - ação definitiva;
- * - turnos que ficarão incompletos;
- * - registros ajustados/retroativos na seleção.
+ * Confirmação de exclusão (1 ou vários registros). V6: vão para a Lixeira (30 dias).
  * O botão "Excluir" só habilita após marcar "Entendo…".
  */
 @Composable
@@ -51,10 +49,9 @@ fun DialogoExclusao(
                 if (n > 6) Text("… e mais ${n - 6} registro(s)", fontSize = 13.sp, color = cs.onSurface.copy(alpha = 0.7f))
 
                 Spacer(Modifier.height(12.dp))
-                Aviso("Esta ação é definitiva e não pode ser desfeita.", CorErro)
+                Aviso("Os registros vão para a LIXEIRA (Ajustes > Lixeira) e podem ser restaurados por 30 dias.", cs.primary)
                 if (avisoTurno) Aviso("Alguns turnos ficarão incompletos (entrada ou saída sem par) e as horas deles deixarão de ser somadas.", CorAviso)
                 if (especiais > 0) Aviso("$especiais registro(s) selecionado(s) são AJUSTADOS ou RETROATIVOS.", CorAviso)
-                if (n >= 10) Aviso("Muitos registros selecionados. Considere gerar um backup antes (Ajustes > Backup).", CorAviso)
 
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -62,7 +59,7 @@ fun DialogoExclusao(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Checkbox(checked = entendi, onCheckedChange = { entendi = it })
-                    Text("Entendo que os registros serão apagados", fontSize = 14.sp, color = cs.onSurface)
+                    Text("Entendo que os registros serão excluídos", fontSize = 14.sp, color = cs.onSurface)
                 }
             }
         },
@@ -76,6 +73,6 @@ fun DialogoExclusao(
 }
 
 @Composable
-private fun Aviso(texto: String, cor: androidx.compose.ui.graphics.Color) {
+private fun Aviso(texto: String, cor: Color) {
     Text("⚠ $texto", fontSize = 13.sp, color = cor, modifier = Modifier.padding(vertical = 2.dp))
 }

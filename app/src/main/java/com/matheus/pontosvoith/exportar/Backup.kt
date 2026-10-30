@@ -37,6 +37,7 @@ object Backup {
                 put("status_local", b.statusLocal)
                 put("origem", b.origem)
                 put("ajustado", b.ajustado)
+                put("almoco", b.almoco)
                 b.dataAjuste?.let { put("data_ajuste", it) }
                 b.valorOriginal?.let { put("valor_original", it) }
                 b.obsAjuste?.let { put("obs_ajuste", it) }
@@ -78,7 +79,8 @@ object Backup {
                 dataAjuste = if (o.has("data_ajuste")) o.getLong("data_ajuste") else null,
                 valorOriginal = if (o.has("valor_original")) o.getLong("valor_original") else null,
                 obsAjuste = if (o.has("obs_ajuste")) o.getString("obs_ajuste") else null,
-                criadoEm = o.optLong("criado_em", o.getLong("data_hora"))
+                criadoEm = o.optLong("criado_em", o.getLong("data_hora")),
+                almoco = tipo == TipoBatida.SAIDA && o.optBoolean("almoco", false)
             )
         }
         return Conteudo(lista, raiz.optLong("gerado_em", 0L), raiz.optString("versao_app", "?"), raiz.optJSONObject("config"))

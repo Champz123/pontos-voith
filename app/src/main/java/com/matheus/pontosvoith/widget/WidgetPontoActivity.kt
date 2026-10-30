@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.os.Bundle
 import android.widget.Toast
 import com.matheus.pontosvoith.dados.Repositorio
+import com.matheus.pontosvoith.dados.StatusLocal
 import com.matheus.pontosvoith.dados.TipoBatida
 import com.matheus.pontosvoith.dados.calcularEstado
 import com.matheus.pontosvoith.dados.montarTurnos
@@ -17,14 +18,16 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Tela invisível aberta pelos botões do widget.
- * - Registro normal: grava na hora e mostra uma confirmação rápida.
+ * Tela invisível usada pelo widget, pelos atalhos do ícone e pelo bloco das Configurações rápidas.
+ * - Registro normal: grava na hora, inicia a captura de GPS em primeiro plano e mostra confirmação.
  * - 2ª entrada ou saída sem entrada: mostra o MESMO aviso do app antes de gravar.
+ * - Desfazer: apaga a última batida (dentro de 10 s).
  */
 class WidgetPontoActivity : Activity() {
 
     companion object {
         const val EXTRA_TIPO = "tipo"
+        const val EXTRA_DESFAZER_ID = "desfazer_id"
         private val FMT_HM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
         private val FMT_HMS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
         private val FMT_DIA: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -37,9 +40,25 @@ class WidgetPontoActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Desfazer
+        val desfazerId = intent?.getLongExtra(EXTRA_DESFAZER_ID, -1L) ?: -1L
+        if (desfazerId > 0) {
+            escopo.launch {
+                val r = runCatching { Repositorio.desfazer(desfazerId) }.getOrNull()
+                aviso(
+                    if (r != null) "↶ ${nomeTipo(r.tipo)} das ${r.dataHora.fmt(FMT_HMS)} desfeita"
+                    else "Tempo para desfazer esgotado"
+                )
+                fechar()
+            }
+            return
+        }
+
         val tipo: String = intent?.getStringExtra(EXTRA_TIPO)
             ?.takeIf { it == TipoBatida.ENTRADA || it == TipoBatida.SAIDA }
             ?: run { fechar(); return }
+
         escopo.launch {
             try {
                 val todas = Repositorio.todas()
@@ -88,8 +107,11 @@ class WidgetPontoActivity : Activity() {
 
     private suspend fun registrar(tipo: String) {
         try {
-            val b = Repositorio.registrar(tipo)
-            aviso("✓ ${nomeTipo(tipo)} registrada às ${b.dataHora.fmt(FMT_HMS)}")
+            val b = Repositorio.registrar(tipo, capturarLocalAqui = false)
+            // GPS confiável: captura em primeiro plano enquanto esta tela ainda está visível
+            if (b.statusLocal == StatusLocal.PENDENTE) CapturaLocalServico.iniciar(this, b.id)
+            val extra = if (b.tipo == TipoBatida.SAIDA && b.almoco) " (−1h almoço)" else ""
+            aviso("✓ ${nomeTipo(tipo)} registrada às ${b.dataHora.fmt(FMT_HMS)}$extra")
         } catch (e: Exception) {
             aviso("✕ Falha ao registrar: ${e.message ?: "erro"}")
         } finally {
@@ -105,11 +127,11 @@ class WidgetPontoActivity : Activity() {
         if (finalizado) return
         finalizado = true
         finish()
+        @Suppress("DEPRECATION")
         overridePendingTransition(0, 0)
     }
 
     override fun onDestroy() {
-        // Não cancela gravações em andamento: o Repositorio usa o escopo do app para o GPS.
         escopo.cancel()
         super.onDestroy()
     }

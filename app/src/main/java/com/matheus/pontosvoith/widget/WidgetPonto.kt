@@ -1,5 +1,6 @@
 package com.matheus.pontosvoith.widget
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -10,8 +11,10 @@ import android.graphics.Color
 import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
+import android.widget.Toast
 import com.matheus.pontosvoith.MainActivity
 import com.matheus.pontosvoith.R
+import com.matheus.pontosvoith.dados.Preferencias
 import com.matheus.pontosvoith.dados.Repositorio
 import com.matheus.pontosvoith.dados.TipoBatida
 import com.matheus.pontosvoith.dados.calcularEstado
@@ -27,11 +30,34 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Widget da tela inicial (RemoteViews nativo, sem bibliotecas extras).
- * Mostra o status do turno (com contador ao vivo) e os botões ENTRADA / SAÍDA.
+ * Status do turno (contador ao vivo), ENTRADA / SAÍDA, caixa de almoço e "Desfazer" (10 s).
  */
 class WidgetPonto : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        atualizarAssincrono(context)
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.action) {
+            ACAO_ALMOCO -> {
+                val novo = !Preferencias.almoco(context)
+                Preferencias.salvarAlmoco(context, novo)
+                Toast.makeText(
+                    context.applicationContext,
+                    if (novo) "⚠ Almoço de 1h ATIVADO: 1h será descontada na próxima SAÍDA"
+                    else "Desconto de almoço desativado",
+                    Toast.LENGTH_LONG
+                ).show()
+                Repositorio.notificar() // atualiza o app aberto, o widget e o bloco
+                atualizarAssincrono(context)
+            }
+            ACAO_ATUALIZAR -> atualizarAssincrono(context)
+            else -> super.onReceive(context, intent)
+        }
+    }
+
+    private fun atualizarAssincrono(context: Context) {
         val pendente = goAsync()
         escopo.launch {
             try {
@@ -43,10 +69,13 @@ class WidgetPonto : AppWidgetProvider() {
     }
 
     companion object {
+        const val ACAO_ALMOCO = "com.matheus.pontosvoith.WIDGET_ALMOCO"
+        const val ACAO_ATUALIZAR = "com.matheus.pontosvoith.WIDGET_ATUALIZAR"
         private val escopo = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private val FMT_HM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
         private val FMT_DIA: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM")
         private const val AZUL = 0xFF094AFE.toInt()
+        private const val AMARELO = 0xFFFFC94D.toInt()
 
         private fun Long.fmt(f: DateTimeFormatter): String =
             Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).format(f)
@@ -64,7 +93,6 @@ class WidgetPonto : AppWidgetProvider() {
             val v = RemoteViews(app.packageName, R.layout.widget_ponto)
 
             if (aberta != null) {
-                // Turno em andamento: contador ao vivo (o próprio Android faz ele andar)
                 val decorrido = System.currentTimeMillis() - aberta.dataHora
                 v.setViewVisibility(R.id.widget_cronometro, View.VISIBLE)
                 v.setViewVisibility(R.id.widget_principal, View.GONE)
@@ -82,11 +110,10 @@ class WidgetPonto : AppWidgetProvider() {
                 v.setViewVisibility(R.id.widget_indicador, View.GONE)
                 v.setTextViewText(R.id.widget_status, "SEM TURNO ABERTO")
                 val ult = estado.ultimoCompleto
-                val ini = ult?.entrada
-                val fim = ult?.saida
-                if (ult != null && ini != null && fim != null) {
+                if (ult != null && ult.completo) {
                     val m = ult.duracaoMs / 60000
-                    v.setTextViewText(R.id.widget_principal, "Último turno: ${m / 60}h ${"%02d".format(m % 60)}min")
+                    val alm = if (ult.temAlmoco) " (−1h alm.)" else ""
+                    v.setTextViewText(R.id.widget_principal, "Último turno: ${m / 60}h ${"%02d".format(m % 60)}min$alm")
                 } else {
                     v.setTextViewText(R.id.widget_principal, "Toque em ENTRADA")
                 }
@@ -98,7 +125,23 @@ class WidgetPonto : AppWidgetProvider() {
                 )
             }
 
-            // Destaca o botão "esperado" (igual ao app)
+            // Almoço
+            val almoco = Preferencias.almoco(app)
+            v.setTextViewText(R.id.widget_almoco, if (almoco) "☑ Almoço 1h (−1h na saída)" else "☐ Almoço 1h")
+            v.setTextColor(R.id.widget_almoco, if (almoco) AMARELO else 0xCCFFFFFF.toInt())
+            v.setOnClickPendingIntent(R.id.widget_almoco, intentBroadcast(app, ACAO_ALMOCO, 11))
+
+            // Desfazer (10 s após uma batida)
+            val (ultId, ultEm) = Preferencias.ultimoRegistro(app)
+            val restante = Repositorio.JANELA_DESFAZER_MS - (System.currentTimeMillis() - ultEm)
+            if (ultId > 0 && restante > 0 && todas.any { it.id == ultId }) {
+                v.setViewVisibility(R.id.widget_desfazer, View.VISIBLE)
+                v.setOnClickPendingIntent(R.id.widget_desfazer, intentDesfazer(app, ultId))
+                agendarAtualizacao(app, restante + 500)
+            } else {
+                v.setViewVisibility(R.id.widget_desfazer, View.GONE)
+            }
+
             val entradaEsperada = aberta == null
             estiloBotao(v, R.id.widget_btn_entrada, entradaEsperada)
             estiloBotao(v, R.id.widget_btn_saida, !entradaEsperada)
@@ -120,18 +163,37 @@ class WidgetPonto : AppWidgetProvider() {
                 putExtra(WidgetPontoActivity.EXTRA_TIPO, tipo)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             }
-            return PendingIntent.getActivity(
-                ctx, codigo, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            return PendingIntent.getActivity(ctx, codigo, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+
+        private fun intentDesfazer(ctx: Context, id: Long): PendingIntent {
+            val i = Intent(ctx, WidgetPontoActivity::class.java).apply {
+                putExtra(WidgetPontoActivity.EXTRA_DESFAZER_ID, id)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
+            return PendingIntent.getActivity(ctx, 4, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+
+        private fun intentBroadcast(ctx: Context, acao: String, codigo: Int): PendingIntent {
+            val i = Intent(ctx, WidgetPonto::class.java).setAction(acao)
+            return PendingIntent.getBroadcast(ctx, codigo, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
 
         private fun intentAbrirApp(ctx: Context): PendingIntent {
-            val i = Intent(ctx, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val i = Intent(ctx, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+            return PendingIntent.getActivity(ctx, 3, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+
+        /** Esconde o "Desfazer" quando o tempo acabar. */
+        private fun agendarAtualizacao(ctx: Context, emMs: Long) {
+            runCatching {
+                val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                am.set(
+                    AlarmManager.ELAPSED_REALTIME,
+                    SystemClock.elapsedRealtime() + emMs,
+                    intentBroadcast(ctx, ACAO_ATUALIZAR, 12)
+                )
             }
-            return PendingIntent.getActivity(
-                ctx, 3, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
         }
     }
 }

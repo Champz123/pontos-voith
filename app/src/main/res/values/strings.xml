@@ -2,4 +2,9 @@
     <string name="app_name">Pontos Voith</string>
     <string name="widget_nome">Pontos Voith – Bater ponto</string>
     <string name="widget_descricao">Registre ENTRADA e SAÍDA direto da tela inicial</string>
+    <string name="atalho_entrada">Entrada</string>
+    <string name="atalho_entrada_longo">Bater ENTRADA</string>
+    <string name="atalho_saida">Saída</string>
+    <string name="atalho_saida_longo">Bater SAÍDA</string>
+    <string name="bloco_nome">Bater ponto</string>
 </resources>

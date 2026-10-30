@@ -37,6 +37,7 @@ fun localTexto(b: Batida?): String {
 fun selos(b: Batida?): List<String> = buildList {
     if (b == null) return@buildList
     val nome = if (b.entrada) "Entrada" else "Saída"
+    if (!b.entrada && b.almoco) add("Almoço 1h descontado")
     if (b.ajustado) add("$nome ajustada")
     if (b.retroativa) add("$nome retroativa")
     b.obsAjuste?.let { add(it) }

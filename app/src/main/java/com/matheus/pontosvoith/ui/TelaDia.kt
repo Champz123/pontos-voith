@@ -32,7 +32,7 @@ import java.time.ZoneId
 /**
  * Histórico do dia.
  * - Toque: editar | Toque longo: entra no modo de seleção múltipla.
- * - No modo de seleção: toque marca/desmarca; "Todos"; "Excluir" (com avisos).
+ * - No modo de seleção: toque marca/desmarca; "Todos"; "Excluir" (vai para a Lixeira).
  */
 @Composable
 fun TelaDia(
@@ -138,6 +138,7 @@ fun TelaDia(
                 val registrosDia = remember(todas, d) { todas.filter { it.dataHora.paraData() == d } }
                 val turnosDia = remember(turnos, d) { turnos.filter { it.dia == d } }
                 val total = turnosDia.sumOf { it.duracaoMs }
+                val almocoDia = turnosDia.sumOf { it.descontoAlmocoMs }
                 val incompletos = turnosDia.count { it.incompleto }
 
                 Column(Modifier.fillMaxWidth()) {
@@ -150,6 +151,9 @@ fun TelaDia(
                             fontSize = 13.sp,
                             color = if (incompletos > 0) CorAviso else cs.onSurface.copy(alpha = 0.7f)
                         )
+                        if (almocoDia > 0) {
+                            Text("Almoço descontado: ${duracaoTexto(almocoDia)}", fontSize = 12.sp, color = CorAviso)
+                        }
                         if (turnosDia.any { it.emAndamento }) {
                             Text("Há um turno em andamento (não somado).", fontSize = 12.sp, color = cs.onSurface.copy(alpha = 0.6f))
                         }
@@ -166,7 +170,7 @@ fun TelaDia(
                     } else {
                         Text(
                             if (modoSelecao) "Toque para marcar/desmarcar. Voltar cancela a seleção."
-                            else "Toque para editar • Segure para selecionar vários.",
+                            else "Toque para editar • Segure para selecionar vários • 📍 abre o mapa",
                             fontSize = 12.sp, color = cs.onBackground.copy(alpha = 0.55f)
                         )
                         registrosDia.forEach { b ->
@@ -220,7 +224,7 @@ fun TelaDia(
                 selecionados = emptySet()
                 executar {
                     val n = Repositorio.excluirVarios(lista)
-                    if (n == 1) "1 registro excluído" else "$n registros excluídos"
+                    if (n == 1) "1 registro movido para a Lixeira" else "$n registros movidos para a Lixeira"
                 }
             }
         )
@@ -231,10 +235,10 @@ fun TelaDia(
             inicial = null,
             diaPadrao = dia,
             onFechar = { incluindo = false },
-            onSalvar = { tipo, ms, obs ->
+            onSalvar = { tipo, ms, obs, almoco ->
                 incluindo = false
                 executar {
-                    Repositorio.incluirManual(tipo, ms, obs)
+                    Repositorio.incluirManual(tipo, ms, obs, almoco)
                     onDia(java.time.Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDate())
                     "Registro incluído (retroativo)"
                 }
@@ -248,17 +252,17 @@ fun TelaDia(
             inicial = b,
             diaPadrao = dia,
             onFechar = { editando = null },
-            onSalvar = { tipo, ms, obs ->
+            onSalvar = { tipo, ms, obs, almoco ->
                 editando = null
                 executar {
-                    if (Repositorio.editar(b.id, tipo, ms, obs)) "Registro ajustado" else "Nenhuma alteração"
+                    if (Repositorio.editar(b.id, tipo, ms, obs, almoco)) "Registro ajustado" else "Nenhuma alteração"
                 }
             },
             onExcluir = {
                 editando = null
                 executar {
                     Repositorio.excluir(b.id)
-                    "Registro excluído"
+                    "Registro movido para a Lixeira"
                 }
             }
         )

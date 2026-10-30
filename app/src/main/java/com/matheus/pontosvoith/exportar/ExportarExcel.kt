@@ -37,7 +37,7 @@ object ExportarExcel {
 
         // ---- aba Turnos
         val linT = ArrayList<List<Cel>>()
-        linT += listOf("Data", "Dia", "Entrada", "Saída", "Data da saída", "Horas (hh:mm)", "Horas (decimal)",
+        linT += listOf("Data", "Dia", "Entrada", "Saída", "Data da saída", "Almoço descontado", "Horas (hh:mm)", "Horas (decimal)",
             "Situação", "Local da entrada", "Local da saída", "Observações").map { Cel.Txt(it, 1) }
         turnos.forEach { t ->
             val e = t.entrada
@@ -48,6 +48,7 @@ object ExportarExcel {
                 Cel.Txt(e?.dataHora?.fmt(F_HM) ?: ""),
                 Cel.Txt(s?.dataHora?.fmt(F_HM) ?: ""),
                 Cel.Txt(s?.dataHora?.fmt(F_DIA) ?: ""),
+                Cel.Txt(if (t.temAlmoco) horasHm(t.descontoAlmocoMs) else ""),
                 Cel.Txt(if (t.completo) horasHm(t.duracaoMs) else ""),
                 if (t.completo) Cel.Num(horasDecimal(t.duracaoMs)) else Cel.Txt(""),
                 Cel.Txt(t.situacao),
@@ -57,9 +58,11 @@ object ExportarExcel {
             )
         }
         val total = turnos.filter { it.completo }.sumOf { it.duracaoMs }
+        val totalAlmoco = turnos.sumOf { it.descontoAlmocoMs }
         linT += emptyList<Cel>()
         linT += listOf(
             Cel.Txt("TOTAL", 3), Cel.Txt(""), Cel.Txt(""), Cel.Txt(""), Cel.Txt(""),
+            Cel.Txt(if (totalAlmoco > 0) horasHm(totalAlmoco) else "", 3),
             Cel.Txt(horasHm(total), 3), Cel.Num(horasDecimal(total), 4),
             Cel.Txt("${turnos.count { it.completo }} turno(s) completo(s)", 3)
         )
@@ -67,13 +70,14 @@ object ExportarExcel {
 
         // ---- aba Registros
         val linR = ArrayList<List<Cel>>()
-        linR += listOf("Data", "Hora", "Tipo", "Latitude", "Longitude", "Precisão (m)", "Endereço",
+        linR += listOf("Data", "Hora", "Tipo", "Almoço 1h", "Latitude", "Longitude", "Precisão (m)", "Endereço",
             "Ajustado", "Horário original", "Retroativo", "Observação").map { Cel.Txt(it, 1) }
         batidas.forEach { b ->
             linR += listOf(
                 Cel.Txt(b.dataHora.fmt(F_DIA)),
                 Cel.Txt(b.dataHora.fmt(F_HMS)),
                 Cel.Txt(nomeTipo(b.tipo)),
+                Cel.Txt(if (!b.entrada && b.almoco) "Sim" else ""),
                 b.latitude?.let { Cel.Num(it, 0) } ?: Cel.Txt(""),
                 b.longitude?.let { Cel.Num(it, 0) } ?: Cel.Txt(""),
                 b.precisao?.let { Cel.Num(Math.round(it).toDouble(), 0) } ?: Cel.Txt(""),
@@ -85,8 +89,8 @@ object ExportarExcel {
             )
         }
 
-        val larguraT = listOf(12, 7, 9, 9, 13, 14, 15, 18, 40, 40, 40)
-        val larguraR = listOf(12, 10, 9, 12, 12, 12, 45, 10, 20, 11, 40)
+        val larguraT = listOf(12, 7, 9, 9, 13, 17, 14, 15, 18, 40, 40, 40)
+        val larguraR = listOf(12, 10, 9, 10, 12, 12, 12, 45, 10, 20, 11, 40)
 
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { z ->

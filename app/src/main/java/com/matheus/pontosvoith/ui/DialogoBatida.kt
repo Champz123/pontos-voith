@@ -2,11 +2,14 @@ package com.matheus.pontosvoith.ui
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +31,7 @@ fun DialogoBatida(
     inicial: Batida?,
     diaPadrao: LocalDate,
     onFechar: () -> Unit,
-    onSalvar: (tipo: String, dataHora: Long, obs: String?) -> Unit,
+    onSalvar: (tipo: String, dataHora: Long, obs: String?, almoco: Boolean) -> Unit,
     onExcluir: (() -> Unit)?
 ) {
     val ctx = LocalContext.current
@@ -42,6 +45,7 @@ fun DialogoBatida(
         mutableStateOf(origLdt?.toLocalTime()?.withSecond(0)?.withNano(0) ?: LocalTime.now().withSecond(0).withNano(0))
     }
     var obs by remember { mutableStateOf(inicial?.obsAjuste ?: "") }
+    var almoco by remember { mutableStateOf(inicial?.almoco ?: false) }
     var erro by remember { mutableStateOf<String?>(null) }
     var confirmarExclusao by remember { mutableStateOf(false) }
 
@@ -87,6 +91,24 @@ fun DialogoBatida(
                         Modifier.weight(1f)
                     ) { Text(hora.format(FMT_HM)) }
                 }
+
+                // V6: almoço (só para SAÍDA)
+                AnimatedVisibility(visible = tipo == TipoBatida.SAIDA) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 8.dp).clickable { almoco = !almoco },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = almoco, onCheckedChange = { almoco = it })
+                        Column {
+                            Text("Houve almoço de 1h", color = cs.onSurface, fontWeight = FontWeight.Medium)
+                            Text(
+                                if (almoco) "1h será descontada deste turno" else "Conta exatamente Entrada → Saída",
+                                fontSize = 12.sp, color = if (almoco) CorAviso else cs.onSurface.copy(alpha = 0.65f)
+                            )
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = obs, onValueChange = { obs = it.take(200) },
@@ -99,7 +121,7 @@ fun DialogoBatida(
                 } else if (!inicial.retroativa) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Alterar data, hora ou tipo marca o registro como AJUSTADO (o horário original fica guardado).",
+                        "Alterar data, hora, tipo ou almoço marca o registro como AJUSTADO (o horário original fica guardado).",
                         fontSize = 12.sp, color = CorAviso
                     )
                 }
@@ -119,7 +141,7 @@ fun DialogoBatida(
                 if (ms > System.currentTimeMillis()) {
                     erro = "Data/hora no futuro não é permitida."
                 } else {
-                    onSalvar(tipo, ms, obs)
+                    onSalvar(tipo, ms, obs, tipo == TipoBatida.SAIDA && almoco)
                 }
             }) { Text("Salvar") }
         },

@@ -4,8 +4,11 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-/** Banco local (SQLite nativo): leve, rápido e 100% offline. */
-class PontoDb(ctx: Context) : SQLiteOpenHelper(ctx, "pontos.db", null, 1) {
+/**
+ * Banco local (SQLite nativo): leve, rápido e 100% offline.
+ * Versão 2 (V6): colunas "almoco" e "excluido_em" (lixeira). A migração mantém todos os dados.
+ */
+class PontoDb(ctx: Context) : SQLiteOpenHelper(ctx, "pontos.db", null, 2) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -23,7 +26,9 @@ class PontoDb(ctx: Context) : SQLiteOpenHelper(ctx, "pontos.db", null, 1) {
                 data_ajuste INTEGER,
                 valor_original INTEGER,
                 obs_ajuste TEXT,
-                criado_em INTEGER NOT NULL
+                criado_em INTEGER NOT NULL,
+                almoco INTEGER NOT NULL DEFAULT 0,
+                excluido_em INTEGER
             )
             """.trimIndent()
         )
@@ -31,6 +36,9 @@ class PontoDb(ctx: Context) : SQLiteOpenHelper(ctx, "pontos.db", null, 1) {
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Migrações futuras entram aqui (sem apagar dados).
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE batidas ADD COLUMN almoco INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE batidas ADD COLUMN excluido_em INTEGER")
+        }
     }
 }

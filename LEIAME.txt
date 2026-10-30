@@ -1,52 +1,48 @@
 ==========================================================================
- PONTOS VOITH – V5 (ENTREGA 5: widget na tela inicial)
+ PONTOS VOITH – V6 (pacote de ATUALIZAÇÃO sobre a V5)
 ==========================================================================
 
-ESTE .ZIP É UM PACOTE DE ATUALIZAÇÃO
-Contém só os arquivos NOVOS e ALTERADOS em relação à V4. Os demais
-arquivos (telas, banco, exportação, chave .jks) continuam os do GitHub.
+NOVIDADES
+1) Caixa "Almoço de 1h neste turno" (abaixo dos botões e no widget)
+   - Marcada: ao bater a SAÍDA, desconta 1h das horas do turno.
+   - Desmarcada: conta exatamente Entrada → Saída.
+   - Aviso ao ativar. Desmarca sozinha depois da saída.
+   - Editável no histórico (registro de saída > "Houve almoço de 1h").
+   - Aparece como selo "ALMOÇO −1h", no Excel (coluna própria) e no PDF.
+2) Desfazer a última batida (10 s) – no app e no widget.
+3) Lixeira: excluídos ficam 30 dias (Ajustes > Lixeira).
+4) Backup automático semanal numa pasta (Ajustes > Backup automático).
+5) GPS confiável no widget/atalhos/bloco (captura curta em 1º plano).
+6) Atalhos no ícone: segure o ícone > Entrada / Saída.
+7) Bloco "Bater ponto" nas Configurações rápidas.
+8) Toque no 📍 de um registro abre a localização no mapa.
+9) Testes automáticos no GitHub (15 testes antes de gerar o APK).
 
-ARQUIVOS NOVOS
-  app/src/main/java/com/matheus/pontosvoith/widget/WidgetPonto.kt
-  app/src/main/java/com/matheus/pontosvoith/widget/WidgetPontoActivity.kt
-  app/src/main/res/layout/widget_ponto.xml
-  app/src/main/res/xml/widget_ponto_info.xml
-  app/src/main/res/drawable/widget_*.xml  (4 arquivos)
-  app/src/main/res/drawable-night/widget_fundo.xml
-ARQUIVOS SUBSTITUÍDOS
-  app/build.gradle.kts            (versão V5)
-  app/src/main/AndroidManifest.xml (registra o widget)
-  app/src/main/res/values/strings.xml, themes.xml
-  .../PontosApp.kt                (atualiza o widget a cada registro)
-  .../MainActivity.kt             (VERSAO_APP = V5)
-  .github/workflows/build.yml     (confere também os arquivos do widget)
+ESTRUTURA DO BANCO
+O banco passa para a versão 2 (colunas almoço e lixeira). A migração é
+automática e mantém todos os registros.
 
 COMO SUBIR
 1. Extraia o .zip.
 2. GitHub > Add file > Upload files > arraste as pastas "app" e ".github".
-   NÃO apague nada antes: o GitHub só substitui/adiciona os arquivos.
-3. Commit changes > aguarde o build > baixe o APK em Artifacts.
-4. Instale POR CIMA da V4 (não desinstale).
+   NÃO apague nada antes (a chave .jks e as telas da V5 continuam lá).
+3. Commit changes > aba Actions:
+   - "Rodar testes automáticos" precisa ficar verde.
+   - O resumo dos testes aparece na página do build (Summary).
+4. Baixe o APK em Artifacts e instale POR CIMA da V5.
 
-COMO ADICIONAR O WIDGET
-Segure num espaço vazio da tela inicial > Widgets > Pontos Voith >
-arraste "Pontos Voith – Bater ponto" para a tela (tamanho 4x2).
+DEPOIS DE INSTALAR
+- Remova e adicione o widget de novo (ele ficou um pouco mais alto).
+- Ajustes > Backup automático > Escolher pasta.
+- Configurações rápidas: puxe a barra > lápis > arraste "Bater ponto".
 
-O QUE O WIDGET FAZ
-- Mostra "TURNO EM ANDAMENTO" com contador ao vivo e ponto verde, ou
-  "SEM TURNO ABERTO" com o último turno e o último registro.
-- Botões ENTRADA e SAÍDA (o esperado fica em branco/destaque).
-- Registro normal: grava na hora e mostra uma confirmação rápida.
-- 2ª entrada ou saída sem entrada: mostra o MESMO aviso do app antes.
-- Toque no título "Pontos Voith" abre o app.
-- Atualiza sozinho quando você registra pelo app ou pelo widget.
-- Tema escuro do celular: fundo azul-escuro/preto.
-
-TESTES SUGERIDOS
-[ ] Adicionar o widget; ele mostra o estado atual
-[ ] ENTRADA pelo widget -> confirmação + contador começa a andar
-[ ] ENTRADA de novo -> aviso "Já existe uma entrada aberta"
-[ ] SAÍDA pelo widget -> "Último turno: Xh YYmin"
-[ ] SAÍDA sem entrada -> aviso "Não há entrada aberta"
-[ ] Registrar pelo app -> widget atualiza
-[ ] Registros do widget aparecem na aba Dia normalmente
+TESTES SUGERIDOS NO CELULAR
+[ ] Marcar almoço -> aviso; SAÍDA -> turno com −1h; caixa desmarca
+[ ] Desmarcado -> turno igual a Entrada → Saída
+[ ] Bater ponto -> DESFAZER some em 10 s; desfazer apaga o registro
+[ ] Excluir registro -> aparece em Ajustes > Lixeira -> Restaurar
+[ ] Backup automático: escolher pasta -> arquivo PontosVoith_auto_… criado
+[ ] Widget: ENTRADA -> notificação curta "Obtendo localização…" -> GPS salvo
+[ ] Segurar o ícone -> Entrada/Saída funcionam
+[ ] Bloco nas Configurações rápidas mostra "Bater ENTRADA/SAÍDA"
+[ ] Tocar no 📍 abre o mapa

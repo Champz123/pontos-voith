@@ -12,8 +12,8 @@ android {
         applicationId = "com.matheus.pontosvoith"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "V5"
+        versionCode = 7
+        versionName = "V6"
     }
 
     // Chave FIXA (app/pontosvoith.jks, já existente no repositório desde a V2).
@@ -46,6 +46,10 @@ android {
         checkReleaseBuilds = false
         abortOnError = false
     }
+    // V6: testes automáticos (rodam no GitHub antes de gerar o APK)
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -58,4 +62,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.animation:animation")
+
+    // Somente para os testes (não entram no APK)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }

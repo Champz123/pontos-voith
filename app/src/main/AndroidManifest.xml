@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- V6: captura curta de GPS após bater ponto pelo widget/atalhos/bloco -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
@@ -22,9 +25,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- V6: atalhos ao segurar o ícone -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/atalhos" />
         </activity>
 
-        <!-- V5: tela invisível que registra o ponto a partir do widget (e mostra os avisos) -->
+        <!-- Tela invisível que registra o ponto (widget, atalhos e bloco) e mostra os avisos -->
         <activity
             android:name=".widget.WidgetPontoActivity"
             android:exported="false"
@@ -34,7 +41,7 @@
             android:launchMode="singleTask"
             android:theme="@style/Theme.PontosVoith.Transparente" />
 
-        <!-- V5: widget da tela inicial -->
+        <!-- Widget da tela inicial -->
         <receiver
             android:name=".widget.WidgetPonto"
             android:exported="true"
@@ -46,6 +53,24 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_ponto_info" />
         </receiver>
+
+        <!-- V6: captura de GPS em primeiro plano (alguns segundos) -->
+        <service
+            android:name=".widget.CapturaLocalServico"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <!-- V6: bloco nas Configurações rápidas -->
+        <service
+            android:name=".atalhos.BlocoPonto"
+            android:exported="true"
+            android:icon="@drawable/ic_bloco_ponto"
+            android:label="@string/bloco_nome"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
 
         <!-- Compartilhamento de arquivos (Excel/PDF/backup) com o app de e-mail -->
         <provider

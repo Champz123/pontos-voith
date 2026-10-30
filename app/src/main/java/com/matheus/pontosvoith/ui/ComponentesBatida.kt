@@ -1,5 +1,8 @@
 package com.matheus.pontosvoith.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -12,6 +15,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +35,7 @@ import com.matheus.pontosvoith.dados.Batida
 import com.matheus.pontosvoith.dados.StatusLocal
 import com.matheus.pontosvoith.dados.TipoBatida
 import com.matheus.pontosvoith.dados.Turno
+import com.matheus.pontosvoith.dados.nomeTipo
 import com.matheus.pontosvoith.ui.theme.CorAviso
 import com.matheus.pontosvoith.ui.theme.CorOk
 import com.matheus.pontosvoith.ui.theme.CorRetro
@@ -46,9 +52,22 @@ fun textoLocal(b: Batida): String = when (b.statusLocal) {
     else "Localização indisponível"
 }
 
+/** V6: abre as coordenadas no app de mapas (Google Maps, Waze etc.). */
+fun abrirNoMapa(ctx: Context, lat: Double, lon: Double, rotulo: String) {
+    val geo = Uri.parse("geo:$lat,$lon?q=$lat,$lon(${Uri.encode(rotulo)})")
+    try {
+        ctx.startActivity(Intent(Intent.ACTION_VIEW, geo))
+    } catch (e: Exception) {
+        try {
+            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lon")))
+        } catch (_: Exception) {
+        }
+    }
+}
+
 /**
- * Cartão de uma batida, com selos "Ajustado" e "Retroativo".
- * Toque = onClick | Toque longo = onLongClick (seleção múltipla).
+ * Cartão de uma batida, com selos "Almoço", "Ajustado" e "Retroativo".
+ * Toque = onClick | Toque longo = onLongClick (seleção múltipla) | Toque no 📍 = abre o mapa.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -61,6 +80,7 @@ fun ItemBatida(
     onClick: (() -> Unit)? = null
 ) {
     val cs = MaterialTheme.colorScheme
+    val ctx = LocalContext.current
     val entrada = b.tipo == TipoBatida.ENTRADA
     val corTipo = if (entrada) cs.primary else VoithNavy
     val fundo by animateColorAsState(
@@ -107,14 +127,26 @@ fun ItemBatida(
                         fontSize = 14.sp, color = cs.onSurface
                     )
                 }
-                if (b.ajustado || b.retroativa) {
+                val temAlmoco = !entrada && b.almoco
+                if (b.ajustado || b.retroativa || temAlmoco) {
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (temAlmoco) Selo("ALMOÇO −1h", CorAviso)
                         if (b.ajustado) Selo("AJUSTADO", CorAviso)
                         if (b.retroativa) Selo("RETROATIVO", CorRetro)
                     }
                 }
-                Text("📍 ${textoLocal(b)}", fontSize = 12.sp, color = cs.onSurface.copy(alpha = 0.65f))
+                val lat = b.latitude
+                val lon = b.longitude
+                val temMapa = lat != null && lon != null && !modoSelecao
+                Text(
+                    "📍 ${textoLocal(b)}" + if (temMapa) "  • ver no mapa" else "",
+                    modifier = if (temMapa && lat != null && lon != null) Modifier.clickable {
+                        abrirNoMapa(ctx, lat, lon, "${nomeTipo(b.tipo)} ${b.dataHora.formatar(FMT_DIA)} ${b.dataHora.formatar(FMT_HM)}")
+                    } else Modifier,
+                    fontSize = 12.sp,
+                    color = if (temMapa) cs.primary else cs.onSurface.copy(alpha = 0.65f)
+                )
                 b.endereco?.let { Text(it, fontSize = 12.sp, color = cs.onSurface.copy(alpha = 0.65f), maxLines = 2) }
                 val orig = b.valorOriginal
                 if (b.ajustado && orig != null) {
@@ -148,7 +180,7 @@ private fun CaixaSelecao(marcado: Boolean) {
     }
 }
 
-/** Linha de turno: "20:00 → 03:00 (+1)  7h 00min". */
+/** Linha de turno: "20:00 → 03:00 (+1)  7h 00min" (+ selo de almoço quando houver). */
 @Composable
 fun LinhaTurno(t: Turno) {
     val cs = MaterialTheme.colorScheme
@@ -164,7 +196,15 @@ fun LinhaTurno(t: Turno) {
             )
             if (d > 0) " (+$d)" else ""
         } else ""
-        Text("$ini  →  $fim$virou", Modifier.weight(1f), color = cs.onSurface, fontSize = 15.sp)
+        Column(Modifier.weight(1f)) {
+            Text("$ini  →  $fim$virou", color = cs.onSurface, fontSize = 15.sp)
+            if (t.temAlmoco) {
+                Text(
+                    "Bruto ${duracaoTexto(t.duracaoBrutaMs)} − almoço ${duracaoTexto(t.descontoAlmocoMs)}",
+                    fontSize = 11.sp, color = CorAviso
+                )
+            }
+        }
         when {
             t.completo -> Text(duracaoTexto(t.duracaoMs), fontWeight = FontWeight.SemiBold, color = cs.primary)
             t.emAndamento -> Selo("EM ANDAMENTO", CorOk)
