@@ -19,18 +19,18 @@ jobs:
           for f in settings.gradle.kts build.gradle.kts gradle.properties \
                    app/build.gradle.kts app/pontosvoith.jks \
                    app/src/main/AndroidManifest.xml app/src/main/res/xml/caminhos_arquivos.xml \
+                   app/src/main/res/xml/atalhos.xml app/src/main/res/xml/widget_ponto_info.xml \
+                   app/src/main/res/layout/widget_ponto.xml \
                    $B/MainActivity.kt $B/PontosApp.kt \
-                   $B/dados/Batida.kt $B/dados/Repositorio.kt $B/dados/Preferencias.kt \
+                   $B/dados/Batida.kt $B/dados/Repositorio.kt $B/dados/Preferencias.kt $B/dados/PontoDb.kt \
                    $B/exportar/ExportarExcel.kt $B/exportar/ExportarPdf.kt $B/exportar/Backup.kt \
-                   $B/exportar/Arquivos.kt $B/exportar/Periodo.kt \
+                   $B/exportar/BackupAuto.kt $B/exportar/Arquivos.kt $B/exportar/Periodo.kt \
                    $B/ui/AppRaiz.kt $B/ui/TelaPrincipal.kt $B/ui/TelaDia.kt \
                    $B/ui/TelaCalendario.kt $B/ui/TelaPainel.kt $B/ui/TelaAjustes.kt \
-                   $B/ui/DialogoBatida.kt $B/ui/DialogoExclusao.kt $B/ui/ComponentesBatida.kt \
-                   $B/widget/WidgetPonto.kt $B/widget/WidgetPontoActivity.kt \
-                   app/src/main/res/layout/widget_ponto.xml app/src/main/res/xml/widget_ponto_info.xml \
-                   app/src/main/res/drawable/widget_fundo.xml app/src/main/res/drawable-night/widget_fundo.xml \
-                   app/src/main/res/drawable/widget_botao_ativo.xml app/src/main/res/drawable/widget_botao_inativo.xml \
-                   app/src/main/res/drawable/widget_ponto_verde.xml \
+                   $B/ui/DialogoBatida.kt $B/ui/DialogoExclusao.kt $B/ui/DialogoLixeira.kt $B/ui/ComponentesBatida.kt \
+                   $B/widget/WidgetPonto.kt $B/widget/WidgetPontoActivity.kt $B/widget/CapturaLocalServico.kt \
+                   $B/atalhos/BlocoPonto.kt \
+                   app/src/test/java/com/matheus/pontosvoith/RegrasTest.kt \
                    app/src/main/res/mipmap-hdpi/ic_launcher.png; do
             if [ ! -f "$f" ]; then echo "::error::FALTANDO: $f"; FALTANDO=1; fi
           done
@@ -50,6 +50,43 @@ jobs:
 
       - name: Aceitar licenças do Android SDK
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      # V6: testes automáticos. Se algum falhar, o build para aqui e o APK NÃO é gerado.
+      - name: Rodar testes automáticos
+        run: gradle :app:testDebugUnitTest --no-daemon
+
+      - name: Resumo dos testes
+        if: always()
+        run: |
+          DIR=app/build/test-results/testDebugUnitTest
+          if ls $DIR/*.xml >/dev/null 2>&1; then
+            T=0; F=0; E=0
+            for f in $DIR/*.xml; do
+              T=$((T + $(grep -o 'tests="[0-9]*"' "$f" | head -1 | grep -o '[0-9]*')))
+              F=$((F + $(grep -o 'failures="[0-9]*"' "$f" | head -1 | grep -o '[0-9]*')))
+              E=$((E + $(grep -o 'errors="[0-9]*"' "$f" | head -1 | grep -o '[0-9]*')))
+            done
+            OK=$((T - F - E))
+            {
+              echo "## Testes automáticos – Pontos Voith"
+              echo ""
+              echo "| Total | Passaram | Falharam |"
+              echo "|---|---|---|"
+              echo "| $T | $OK | $((F + E)) |"
+              echo ""
+              grep -ho '<testcase name="[^"]*"' $DIR/*.xml | sed 's/<testcase name="/- /; s/"$//'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Testes não chegaram a rodar (erro de compilação antes)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Publicar relatório dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Relatorio-Testes
+          path: app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
 
       - name: Compilar APK (release)
         run: gradle :app:assembleRelease --no-daemon --stacktrace
