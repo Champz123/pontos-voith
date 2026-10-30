@@ -15,20 +15,21 @@ jobs:
       - name: Verificar estrutura do projeto
         run: |
           FALTANDO=0
+          B=app/src/main/java/com/matheus/pontosvoith
           for f in settings.gradle.kts build.gradle.kts gradle.properties \
                    app/build.gradle.kts app/pontosvoith.jks \
-                   app/src/main/AndroidManifest.xml \
-                   app/src/main/java/com/matheus/pontosvoith/MainActivity.kt \
-                   app/src/main/java/com/matheus/pontosvoith/PontosApp.kt \
-                   app/src/main/java/com/matheus/pontosvoith/dados/Repositorio.kt \
-                   app/src/main/java/com/matheus/pontosvoith/ui/TelaPrincipal.kt \
+                   app/src/main/AndroidManifest.xml app/src/main/res/xml/caminhos_arquivos.xml \
+                   $B/MainActivity.kt $B/PontosApp.kt \
+                   $B/dados/Batida.kt $B/dados/Repositorio.kt $B/dados/Preferencias.kt \
+                   $B/exportar/ExportarExcel.kt $B/exportar/ExportarPdf.kt $B/exportar/Backup.kt \
+                   $B/exportar/Arquivos.kt $B/exportar/Periodo.kt \
+                   $B/ui/AppRaiz.kt $B/ui/TelaPrincipal.kt $B/ui/TelaDia.kt \
+                   $B/ui/TelaCalendario.kt $B/ui/TelaPainel.kt $B/ui/TelaAjustes.kt \
+                   $B/ui/DialogoBatida.kt $B/ui/DialogoExclusao.kt $B/ui/ComponentesBatida.kt \
                    app/src/main/res/mipmap-hdpi/ic_launcher.png; do
             if [ ! -f "$f" ]; then echo "::error::FALTANDO: $f"; FALTANDO=1; fi
           done
-          if [ "$FALTANDO" = "1" ]; then
-            echo "::error::Arquivos faltando. Envie novamente a pasta app completa."
-            exit 1
-          fi
+          if [ "$FALTANDO" = "1" ]; then exit 1; fi
           echo "Estrutura OK"
 
       - name: Instalar JDK 17
