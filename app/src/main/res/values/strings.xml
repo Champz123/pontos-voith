@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Pontos Voith</string>
+    <string name="widget_nome">Pontos Voith – Bater ponto</string>
+    <string name="widget_descricao">Registre ENTRADA e SAÍDA direto da tela inicial</string>
 </resources>

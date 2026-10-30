@@ -12,8 +12,8 @@ android {
         applicationId = "com.matheus.pontosvoith"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "V4"
+        versionCode = 6
+        versionName = "V5"
     }
 
     // Chave FIXA (app/pontosvoith.jks, já existente no repositório desde a V2).

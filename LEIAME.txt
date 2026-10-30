@@ -1,50 +1,52 @@
 ==========================================================================
- PONTOS VOITH – V4 (ENTREGA 4: Excel, PDF, backup, e-mail + melhorias)
+ PONTOS VOITH – V5 (ENTREGA 5: widget na tela inicial)
 ==========================================================================
 
-NOVIDADES DA V4
-1) Aviso de SAÍDA sem entrada aberta (igual ao de 2ª entrada):
-   aparece ANTES de registrar, mostrando o último registro.
-   Opções: Cancelar / Registrar mesmo assim.
+ESTE .ZIP É UM PACOTE DE ATUALIZAÇÃO
+Contém só os arquivos NOVOS e ALTERADOS em relação à V4. Os demais
+arquivos (telas, banco, exportação, chave .jks) continuam os do GitHub.
 
-2) Seleção múltipla no histórico (aba Dia):
-   - SEGURE um registro para entrar no modo de seleção.
-   - Toque para marcar/desmarcar; "Todos" marca o dia inteiro.
-   - Lixeira -> diálogo com avisos:
-       * ação definitiva;
-       * turnos que ficarão incompletos;
-       * registros AJUSTADOS/RETROATIVOS na seleção;
-       * 10+ registros: sugere backup antes.
-     O botão "Excluir" só libera após marcar "Entendo…".
-   - Botão Voltar ou "X" cancela a seleção.
-
-3) Exportação (aba Ajustes):
-   - Período: Mês | Personalizado | Tudo.
-   - Excel (.xlsx): aba "Turnos" (com TOTAL) e aba "Registros".
-   - PDF: relatório A4 com resumo e tabela de turnos.
-   - "Salvar" escolhe a pasta; "Enviar" abre o app de e-mail com o
-     arquivo anexado e o e-mail padrão preenchido.
-
-4) Backup e restauração (aba Ajustes):
-   - Backup .json com todos os registros e ajustes (Salvar / Enviar).
-   - Restaurar: "Mesclar" (adiciona só o que falta, ignora duplicados)
-     ou "Substituir tudo" (pede confirmação extra).
-   - Mostra a data do último backup.
-
-ATENÇÃO – CHAVE DE ASSINATURA
-O .zip NÃO contém app/pontosvoith.jks. Use o que já está no GitHub.
-Arraste a nova pasta "app" por cima (NÃO apague a pasta antes).
-Instale a V4 POR CIMA da V3 (não desinstale).
+ARQUIVOS NOVOS
+  app/src/main/java/com/matheus/pontosvoith/widget/WidgetPonto.kt
+  app/src/main/java/com/matheus/pontosvoith/widget/WidgetPontoActivity.kt
+  app/src/main/res/layout/widget_ponto.xml
+  app/src/main/res/xml/widget_ponto_info.xml
+  app/src/main/res/drawable/widget_*.xml  (4 arquivos)
+  app/src/main/res/drawable-night/widget_fundo.xml
+ARQUIVOS SUBSTITUÍDOS
+  app/build.gradle.kts            (versão V5)
+  app/src/main/AndroidManifest.xml (registra o widget)
+  app/src/main/res/values/strings.xml, themes.xml
+  .../PontosApp.kt                (atualiza o widget a cada registro)
+  .../MainActivity.kt             (VERSAO_APP = V5)
+  .github/workflows/build.yml     (confere também os arquivos do widget)
 
 COMO SUBIR
 1. Extraia o .zip.
-2. GitHub > Add file > Upload files > arraste "app" e ".github".
-3. Commit changes > aguarde o build (Actions) > baixe em Artifacts.
+2. GitHub > Add file > Upload files > arraste as pastas "app" e ".github".
+   NÃO apague nada antes: o GitHub só substitui/adiciona os arquivos.
+3. Commit changes > aguarde o build > baixe o APK em Artifacts.
+4. Instale POR CIMA da V4 (não desinstale).
+
+COMO ADICIONAR O WIDGET
+Segure num espaço vazio da tela inicial > Widgets > Pontos Voith >
+arraste "Pontos Voith – Bater ponto" para a tela (tamanho 4x2).
+
+O QUE O WIDGET FAZ
+- Mostra "TURNO EM ANDAMENTO" com contador ao vivo e ponto verde, ou
+  "SEM TURNO ABERTO" com o último turno e o último registro.
+- Botões ENTRADA e SAÍDA (o esperado fica em branco/destaque).
+- Registro normal: grava na hora e mostra uma confirmação rápida.
+- 2ª entrada ou saída sem entrada: mostra o MESMO aviso do app antes.
+- Toque no título "Pontos Voith" abre o app.
+- Atualiza sozinho quando você registra pelo app ou pelo widget.
+- Tema escuro do celular: fundo azul-escuro/preto.
 
 TESTES SUGERIDOS
-[ ] Sem turno aberto, tocar SAÍDA -> aviso antes de registrar
-[ ] Aba Dia: segurar um registro -> modo seleção; marcar 2+ -> excluir
-[ ] Excluir só uma ponta de um turno -> aviso "turnos incompletos"
-[ ] Ajustes > Excel > Salvar -> abrir no Excel/Sheets
-[ ] Ajustes > PDF > Enviar -> Gmail abre com anexo e e-mail preenchido
-[ ] Backup > Salvar; depois Restaurar > Mesclar -> "duplicados ignorados"
+[ ] Adicionar o widget; ele mostra o estado atual
+[ ] ENTRADA pelo widget -> confirmação + contador começa a andar
+[ ] ENTRADA de novo -> aviso "Já existe uma entrada aberta"
+[ ] SAÍDA pelo widget -> "Último turno: Xh YYmin"
+[ ] SAÍDA sem entrada -> aviso "Não há entrada aberta"
+[ ] Registrar pelo app -> widget atualiza
+[ ] Registros do widget aparecem na aba Dia normalmente

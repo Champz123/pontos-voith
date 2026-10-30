@@ -24,6 +24,29 @@
             </intent-filter>
         </activity>
 
+        <!-- V5: tela invisível que registra o ponto a partir do widget (e mostra os avisos) -->
+        <activity
+            android:name=".widget.WidgetPontoActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.PontosVoith.Transparente" />
+
+        <!-- V5: widget da tela inicial -->
+        <receiver
+            android:name=".widget.WidgetPonto"
+            android:exported="true"
+            android:label="@string/widget_nome">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_ponto_info" />
+        </receiver>
+
         <!-- Compartilhamento de arquivos (Excel/PDF/backup) com o app de e-mail -->
         <provider
             android:name="androidx.core.content.FileProvider"
