@@ -26,6 +26,11 @@ jobs:
                    $B/ui/AppRaiz.kt $B/ui/TelaPrincipal.kt $B/ui/TelaDia.kt \
                    $B/ui/TelaCalendario.kt $B/ui/TelaPainel.kt $B/ui/TelaAjustes.kt \
                    $B/ui/DialogoBatida.kt $B/ui/DialogoExclusao.kt $B/ui/ComponentesBatida.kt \
+                   $B/widget/WidgetPonto.kt $B/widget/WidgetPontoActivity.kt \
+                   app/src/main/res/layout/widget_ponto.xml app/src/main/res/xml/widget_ponto_info.xml \
+                   app/src/main/res/drawable/widget_fundo.xml app/src/main/res/drawable-night/widget_fundo.xml \
+                   app/src/main/res/drawable/widget_botao_ativo.xml app/src/main/res/drawable/widget_botao_inativo.xml \
+                   app/src/main/res/drawable/widget_ponto_verde.xml \
                    app/src/main/res/mipmap-hdpi/ic_launcher.png; do
             if [ ! -f "$f" ]; then echo "::error::FALTANDO: $f"; FALTANDO=1; fi
           done
