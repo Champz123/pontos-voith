@@ -29,7 +29,6 @@ import com.matheus.pontosvoith.ui.theme.CorAviso
 import java.time.LocalDate
 import java.time.YearMonth
 
-/** Calendário mensal: dias coloridos conforme horas trabalhadas. Toque abre o dia. */
 @Composable
 fun TelaCalendario(
     mes: YearMonth,
@@ -78,7 +77,7 @@ fun TelaCalendario(
                         }
                     }
                     Spacer(Modifier.height(4.dp))
-                    val offset = m.atDay(1).dayOfWeek.value % 7 // domingo = 0
+                    val offset = m.atDay(1).dayOfWeek.value % 7
                     val qtdDias = m.lengthOfMonth()
                     val linhas = (offset + qtdDias + 6) / 7
                     val hoje = LocalDate.now()
@@ -188,13 +187,5 @@ private fun Legenda(cor: Color, texto: String) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(cor))
         Spacer(Modifier.width(6.dp))
         Text(texto, fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
-    }
-}
-
-@Composable
-fun LinhaResumo(rotulo: String, valor: @Composable () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(rotulo, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
-        valor()
     }
 }

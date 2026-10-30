@@ -18,9 +18,14 @@ object Preferencias {
         sp(ctx).edit().putBoolean("gps_ativo", ativo).apply()
     }
 
-    /** E-mail padrão para envio de relatórios (usado na Entrega 4). */
+    /** E-mail padrão para envio de relatórios e backups. */
     fun email(ctx: Context): String = sp(ctx).getString("email_padrao", "") ?: ""
     fun salvarEmail(ctx: Context, email: String) {
         sp(ctx).edit().putString("email_padrao", email.trim()).apply()
+    }
+
+    fun ultimoBackup(ctx: Context): Long = sp(ctx).getLong("ultimo_backup", 0L)
+    fun salvarUltimoBackup(ctx: Context, ms: Long) {
+        sp(ctx).edit().putLong("ultimo_backup", ms).apply()
     }
 }

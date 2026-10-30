@@ -35,7 +35,6 @@ fun AppRaiz(escuro: Boolean, onTema: (Boolean) -> Unit) {
     var dia by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var mes by rememberSaveable { mutableStateOf(YearMonth.now()) }
 
-    // Fonte única de dados: recarrega quando o banco muda
     val versao by Repositorio.versao.collectAsState()
     var todas by remember { mutableStateOf<List<Batida>>(emptyList()) }
     LaunchedEffect(versao) { todas = Repositorio.todas() }
@@ -82,13 +81,12 @@ fun AppRaiz(escuro: Boolean, onTema: (Boolean) -> Unit) {
                     aba = Aba.DIA
                 }
                 Aba.PAINEL -> TelaPainel(mes, { mes = it }, turnos)
-                Aba.AJUSTES -> TelaAjustes(escuro, onTema, todas)
+                Aba.AJUSTES -> TelaAjustes(escuro, onTema, todas, turnos)
             }
         }
     }
 }
 
-/** Ícone simples de gráfico de barras (desenhado). */
 @Composable
 private fun IconeBarras(cor: Color) {
     Canvas(Modifier.size(24.dp)) {

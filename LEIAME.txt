@@ -1,45 +1,50 @@
 ==========================================================================
- PONTOS VOITH – V3 (ENTREGA 3: telas + animações + edição)
+ PONTOS VOITH – V4 (ENTREGA 4: Excel, PDF, backup, e-mail + melhorias)
 ==========================================================================
 
-NOVIDADES DA V3
-- Navegação inferior com 5 abas: Ponto | Dia | Mês | Painel | Ajustes,
-  com transição deslizante entre as telas.
-- PONTO: aviso ANTES de registrar uma 2ª entrada quando já existe uma
-  entrada aguardando saída (Cancelar / Registrar mesmo assim).
-- DIA: horas trabalhadas do dia, turnos (ex.: 20:00 → 03:00 (+1)) e
-  registros. Toque num registro para editar/excluir. Botão "Incluir"
-  para registro manual (data/hora retroativa).
-  * Editado  -> selo AJUSTADO + horário original guardado.
-  * Incluído -> selo RETROATIVO.
-- MÊS: calendário colorido conforme as horas; ponto amarelo = turno
-  incompleto; toque no dia abre a aba Dia. Resumo do mês.
-- PAINEL: Hoje, Semana, Total do mês, Média/dia, Dias trabalhados,
-  Turnos incompletos (números animados) + gráfico de barras (horas por
-  dia) e gráfico de linha (últimos 6 meses), ambos animados.
-- AJUSTES: tema, GPS liga/desliga, atalho para permissões, e-mail
-  padrão (usado na Entrega 4) e informações do app.
+NOVIDADES DA V4
+1) Aviso de SAÍDA sem entrada aberta (igual ao de 2ª entrada):
+   aparece ANTES de registrar, mostrando o último registro.
+   Opções: Cancelar / Registrar mesmo assim.
+
+2) Seleção múltipla no histórico (aba Dia):
+   - SEGURE um registro para entrar no modo de seleção.
+   - Toque para marcar/desmarcar; "Todos" marca o dia inteiro.
+   - Lixeira -> diálogo com avisos:
+       * ação definitiva;
+       * turnos que ficarão incompletos;
+       * registros AJUSTADOS/RETROATIVOS na seleção;
+       * 10+ registros: sugere backup antes.
+     O botão "Excluir" só libera após marcar "Entendo…".
+   - Botão Voltar ou "X" cancela a seleção.
+
+3) Exportação (aba Ajustes):
+   - Período: Mês | Personalizado | Tudo.
+   - Excel (.xlsx): aba "Turnos" (com TOTAL) e aba "Registros".
+   - PDF: relatório A4 com resumo e tabela de turnos.
+   - "Salvar" escolhe a pasta; "Enviar" abre o app de e-mail com o
+     arquivo anexado e o e-mail padrão preenchido.
+
+4) Backup e restauração (aba Ajustes):
+   - Backup .json com todos os registros e ajustes (Salvar / Enviar).
+   - Restaurar: "Mesclar" (adiciona só o que falta, ignora duplicados)
+     ou "Substituir tudo" (pede confirmação extra).
+   - Mostra a data do último backup.
 
 ATENÇÃO – CHAVE DE ASSINATURA
-O .zip NÃO contém o arquivo app/pontosvoith.jks. Use o que JÁ ESTÁ no
-GitHub desde a V2. NÃO apague a pasta "app" do repositório antes de
-subir; apenas arraste a nova por cima (o GitHub substitui os arquivos e
-mantém o .jks). Assim a V3 instala POR CIMA da V2 sem perder registros.
+O .zip NÃO contém app/pontosvoith.jks. Use o que já está no GitHub.
+Arraste a nova pasta "app" por cima (NÃO apague a pasta antes).
+Instale a V4 POR CIMA da V3 (não desinstale).
 
-COMO SUBIR NO GITHUB
+COMO SUBIR
 1. Extraia o .zip.
-2. Add file > Upload files > arraste as pastas "app" e ".github".
-   (Se a .github não aparecer no Windows, edite o build.yml no GitHub e
-   cole o conteúdo de .github/workflows/build.yml.)
-3. Commit changes. Aguarde o build na aba Actions.
-4. Baixe o APK em Artifacts e instale POR CIMA (não desinstale).
+2. GitHub > Add file > Upload files > arraste "app" e ".github".
+3. Commit changes > aguarde o build (Actions) > baixe em Artifacts.
 
 TESTES SUGERIDOS
-[ ] Com turno aberto, tocar ENTRADA -> aparece o aviso
-[ ] Aba Dia: editar um registro -> selo AJUSTADO + "Original: ..."
-[ ] Aba Dia: Incluir registro em dia passado -> selo RETROATIVO
-[ ] Aba Dia: excluir registro (pede confirmação)
-[ ] Aba Mês: dias coloridos; tocar num dia abre a aba Dia
-[ ] Aba Painel: números e gráficos animam ao abrir/trocar de mês
-[ ] Ajustes: desligar GPS -> nova batida mostra "GPS desativado"
-[ ] Registros da V2 continuam aparecendo após atualizar
+[ ] Sem turno aberto, tocar SAÍDA -> aviso antes de registrar
+[ ] Aba Dia: segurar um registro -> modo seleção; marcar 2+ -> excluir
+[ ] Excluir só uma ponta de um turno -> aviso "turnos incompletos"
+[ ] Ajustes > Excel > Salvar -> abrir no Excel/Sheets
+[ ] Ajustes > PDF > Enviar -> Gmail abre com anexo e e-mail preenchido
+[ ] Backup > Salvar; depois Restaurar > Mesclar -> "duplicados ignorados"

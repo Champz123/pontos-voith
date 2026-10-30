@@ -27,6 +27,7 @@ import com.matheus.pontosvoith.dados.Repositorio
 import com.matheus.pontosvoith.dados.TipoBatida
 import com.matheus.pontosvoith.dados.Turno
 import com.matheus.pontosvoith.dados.calcularEstado
+import com.matheus.pontosvoith.dados.nomeTipo
 import com.matheus.pontosvoith.ui.theme.CorAviso
 import com.matheus.pontosvoith.ui.theme.CorOk
 import com.matheus.pontosvoith.ui.theme.VoithNavy
@@ -44,7 +45,7 @@ fun TelaPrincipal(
     val escopo = rememberCoroutineScope()
     val cs = MaterialTheme.colorScheme
 
-    val estado = remember(turnos) { calcularEstado(turnos) }
+    val estado = remember(turnos, todas) { calcularEstado(turnos, todas) }
     val recentes = remember(todas) { todas.asReversed().take(6) }
 
     var agora by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -57,7 +58,6 @@ fun TelaPrincipal(
 
     var mensagem by rememberMensagem()
 
-    // Permissão de localização (só pede se o GPS estiver ativo nos Ajustes)
     val gpsAtivo = remember { Preferencias.gpsAtivo(ctx) }
     var temPermissao by remember { mutableStateOf(Localizacao.temPermissao(ctx)) }
     val pedirPermissao = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -71,6 +71,7 @@ fun TelaPrincipal(
 
     var registrando by remember { mutableStateOf(false) }
     var confirmarSegundaEntrada by remember { mutableStateOf(false) }
+    var confirmarSaidaSemEntrada by remember { mutableStateOf(false) }
 
     fun baterPonto(tipo: String) {
         if (registrando) return
@@ -84,7 +85,7 @@ fun TelaPrincipal(
                     tipo == TipoBatida.ENTRADA && havia ->
                         Mensagem(TipoMensagem.AVISO, "Entrada registrada às $hora. A entrada anterior ficou sem saída.")
                     tipo == TipoBatida.SAIDA && !havia ->
-                        Mensagem(TipoMensagem.AVISO, "Saída registrada às $hora. Não havia entrada aberta.")
+                        Mensagem(TipoMensagem.AVISO, "Saída registrada às $hora sem entrada aberta.")
                     tipo == TipoBatida.ENTRADA -> Mensagem(TipoMensagem.OK, "Entrada registrada às $hora")
                     else -> Mensagem(TipoMensagem.OK, "Saída registrada às $hora")
                 }
@@ -122,11 +123,15 @@ fun TelaPrincipal(
             val proximo = if (estado.abertoDesde == null) TipoBatida.ENTRADA else TipoBatida.SAIDA
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 BotaoPonto("ENTRADA", cs.primary, proximo == TipoBatida.ENTRADA, !registrando) {
-                    // NOVO V3: avisa ANTES de registrar uma 2ª entrada
+                    // Aviso ANTES de registrar uma 2ª entrada
                     if (estado.abertoDesde != null) confirmarSegundaEntrada = true
                     else baterPonto(TipoBatida.ENTRADA)
                 }
-                BotaoPonto("SAÍDA", VoithNavy, proximo == TipoBatida.SAIDA, !registrando) { baterPonto(TipoBatida.SAIDA) }
+                BotaoPonto("SAÍDA", VoithNavy, proximo == TipoBatida.SAIDA, !registrando) {
+                    // Aviso ANTES de registrar saída sem entrada aberta
+                    if (estado.abertoDesde == null) confirmarSaidaSemEntrada = true
+                    else baterPonto(TipoBatida.SAIDA)
+                }
             }
             MensagemAnimada(mensagem)
 
@@ -178,9 +183,32 @@ fun TelaPrincipal(
                     baterPonto(TipoBatida.ENTRADA)
                 }) { Text("Registrar mesmo assim", color = CorAviso) }
             },
-            dismissButton = {
-                TextButton(onClick = { confirmarSegundaEntrada = false }) { Text("Cancelar") }
-            }
+            dismissButton = { TextButton(onClick = { confirmarSegundaEntrada = false }) { Text("Cancelar") } }
+        )
+    }
+
+    // ------------------------------------------------ aviso de saída sem entrada
+    if (confirmarSaidaSemEntrada && estado.abertoDesde == null) {
+        val ultima = estado.ultimaBatida
+        AlertDialog(
+            onDismissRequest = { confirmarSaidaSemEntrada = false },
+            icon = { Text("!", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = CorAviso) },
+            title = { Text("Não há entrada aberta") },
+            text = {
+                Text(
+                    "Não existe uma ENTRADA aguardando saída." +
+                        (if (ultima != null) "\n\nÚltimo registro: ${nomeTipo(ultima.tipo).uppercase()} às " +
+                            "${ultima.dataHora.formatar(FMT_HM)} de ${ultima.dataHora.formatar(FMT_DIA)}." else "") +
+                        "\n\nSe registrar, esta saída ficará como SAÍDA SEM ENTRADA."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmarSaidaSemEntrada = false
+                    baterPonto(TipoBatida.SAIDA)
+                }) { Text("Registrar mesmo assim", color = CorAviso) }
+            },
+            dismissButton = { TextButton(onClick = { confirmarSaidaSemEntrada = false }) { Text("Cancelar") } }
         )
     }
 }

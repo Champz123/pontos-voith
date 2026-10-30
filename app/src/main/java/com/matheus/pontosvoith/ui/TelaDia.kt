@@ -1,6 +1,7 @@
 package com.matheus.pontosvoith.ui
 
 import android.app.DatePickerDialog
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -8,6 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,11 +24,16 @@ import com.matheus.pontosvoith.dados.Repositorio
 import com.matheus.pontosvoith.dados.Turno
 import com.matheus.pontosvoith.dados.paraData
 import com.matheus.pontosvoith.ui.theme.CorAviso
+import com.matheus.pontosvoith.ui.theme.CorErro
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** Histórico do dia: total trabalhado, turnos e registros (editar/excluir/incluir). */
+/**
+ * Histórico do dia.
+ * - Toque: editar | Toque longo: entra no modo de seleção múltipla.
+ * - No modo de seleção: toque marca/desmarca; "Todos"; "Excluir" (com avisos).
+ */
 @Composable
 fun TelaDia(
     dia: LocalDate,
@@ -39,7 +47,23 @@ fun TelaDia(
     var mensagem by rememberMensagem()
     var editando by remember { mutableStateOf<Batida?>(null) }
     var incluindo by remember { mutableStateOf(false) }
+    var selecionados by remember { mutableStateOf(setOf<Long>()) }
+    var confirmarExclusao by remember { mutableStateOf(false) }
+    val modoSelecao = selecionados.isNotEmpty()
     val hoje = LocalDate.now()
+
+    val doDia = remember(todas, dia) { todas.filter { it.dataHora.paraData() == dia } }
+
+    LaunchedEffect(dia) { selecionados = emptySet() }
+    LaunchedEffect(todas) {
+        val ids = todas.map { it.id }.toSet()
+        selecionados = selecionados.filter { it in ids }.toSet()
+    }
+    BackHandler(enabled = modoSelecao) { selecionados = emptySet() }
+
+    fun alternar(id: Long) {
+        selecionados = if (id in selecionados) selecionados - id else selecionados + id
+    }
 
     fun executar(acao: suspend () -> String) {
         escopo.launch {
@@ -58,7 +82,38 @@ fun TelaDia(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            Text("Histórico do dia", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = cs.primary)
+            AnimatedContent(
+                targetState = modoSelecao,
+                transitionSpec = { (fadeIn(tween(220)) + slideInVertically(tween(220)) { -it / 2 }) togetherWith fadeOut(tween(150)) },
+                label = "cabecalho"
+            ) { selecao ->
+                if (!selecao) {
+                    Text("Histórico do dia", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = cs.primary)
+                } else {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = cs.primary.copy(alpha = 0.12f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { selecionados = emptySet() }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Cancelar seleção", tint = cs.onSurface)
+                            }
+                            Text(
+                                "${selecionados.size} selecionado(s)", Modifier.weight(1f),
+                                fontWeight = FontWeight.SemiBold, color = cs.onSurface
+                            )
+                            val todosMarcados = doDia.isNotEmpty() && doDia.all { it.id in selecionados }
+                            TextButton(onClick = {
+                                selecionados = if (todosMarcados) emptySet() else doDia.map { it.id }.toSet()
+                            }) { Text(if (todosMarcados) "Nenhum" else "Todos") }
+                            IconButton(onClick = { confirmarExclusao = true }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Excluir selecionados", tint = CorErro)
+                            }
+                        }
+                    }
+                }
+            }
+
             SeletorPeriodo(
                 texto = dia.format(FMT_DIA_SEMANA).capitalizar(),
                 onAnterior = { onDia(dia.minusDays(1)) },
@@ -80,7 +135,7 @@ fun TelaDia(
                 },
                 label = "dia"
             ) { d ->
-                val doDia = remember(todas, d) { todas.filter { it.dataHora.paraData() == d } }
+                val registrosDia = remember(todas, d) { todas.filter { it.dataHora.paraData() == d } }
                 val turnosDia = remember(turnos, d) { turnos.filter { it.dia == d } }
                 val total = turnosDia.sumOf { it.duracaoMs }
                 val incompletos = turnosDia.count { it.incompleto }
@@ -106,11 +161,24 @@ fun TelaDia(
                     }
 
                     TituloSecao("Registros do dia")
-                    if (doDia.isEmpty()) {
+                    if (registrosDia.isEmpty()) {
                         Text("Nenhum registro neste dia.", color = cs.onBackground.copy(alpha = 0.6f), fontSize = 14.sp)
                     } else {
-                        Text("Toque em um registro para editar ou excluir.", fontSize = 12.sp, color = cs.onBackground.copy(alpha = 0.55f))
-                        doDia.forEach { b -> ItemBatida(b, mostrarData = false) { editando = b } }
+                        Text(
+                            if (modoSelecao) "Toque para marcar/desmarcar. Voltar cancela a seleção."
+                            else "Toque para editar • Segure para selecionar vários.",
+                            fontSize = 12.sp, color = cs.onBackground.copy(alpha = 0.55f)
+                        )
+                        registrosDia.forEach { b ->
+                            ItemBatida(
+                                b = b,
+                                mostrarData = false,
+                                modoSelecao = modoSelecao,
+                                selecionado = b.id in selecionados,
+                                onLongClick = { alternar(b.id) },
+                                onClick = { if (modoSelecao) alternar(b.id) else editando = b }
+                            )
+                        }
                     }
                 }
             }
@@ -118,13 +186,43 @@ fun TelaDia(
             Spacer(Modifier.height(88.dp))
         }
 
-        ExtendedFloatingActionButton(
-            onClick = { incluindo = true },
+        AnimatedVisibility(
+            visible = !modoSelecao,
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-            text = { Text("Incluir") },
-            containerColor = cs.primary,
-            contentColor = cs.onPrimary
+            enter = scaleIn(tween(200)) + fadeIn(tween(200)),
+            exit = scaleOut(tween(150)) + fadeOut(tween(150))
+        ) {
+            ExtendedFloatingActionButton(
+                onClick = { incluindo = true },
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("Incluir") },
+                containerColor = cs.primary,
+                contentColor = cs.onPrimary
+            )
+        }
+    }
+
+    if (confirmarExclusao) {
+        val alvo = todas.filter { it.id in selecionados }
+        val ids = alvo.map { it.id }.toSet()
+        val quebraTurno = turnos.any { t ->
+            val e = t.entrada
+            val s = t.saida
+            e != null && s != null && ((e.id in ids) xor (s.id in ids))
+        }
+        DialogoExclusao(
+            registros = alvo,
+            avisoTurno = quebraTurno,
+            onCancelar = { confirmarExclusao = false },
+            onConfirmar = {
+                confirmarExclusao = false
+                val lista = ids.toList()
+                selecionados = emptySet()
+                executar {
+                    val n = Repositorio.excluirVarios(lista)
+                    if (n == 1) "1 registro excluído" else "$n registros excluídos"
+                }
+            }
         )
     }
 

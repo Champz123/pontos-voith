@@ -23,19 +23,16 @@ fun LocalDateTime.paraMillis(): Long = atZone(ZoneId.systemDefault()).toInstant(
 
 fun String.capitalizar(): String = replaceFirstChar { it.titlecase(LOCALE_BR) }
 
-/** 29400000 -> "08:10:00" */
 fun duracaoHms(ms: Long): String {
     val s = (ms.coerceAtLeast(0) / 1000)
     return String.format(LOCALE_BR, "%02d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60)
 }
 
-/** 29400000 -> "8h 10min" */
 fun duracaoTexto(ms: Long): String {
     val m = ms.coerceAtLeast(0) / 60000
     return "${m / 60}h ${String.format(LOCALE_BR, "%02d", m % 60)}min"
 }
 
-/** 29400000 -> "8h10" (compacto, para o calendário) */
 fun duracaoCurta(ms: Long): String {
     val m = ms.coerceAtLeast(0) / 60000
     return if (m % 60 == 0L) "${m / 60}h" else "${m / 60}h${String.format(LOCALE_BR, "%02d", m % 60)}"

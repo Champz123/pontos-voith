@@ -12,7 +12,7 @@ import com.matheus.pontosvoith.dados.Preferencias
 import com.matheus.pontosvoith.ui.AppRaiz
 import com.matheus.pontosvoith.ui.theme.PontosVoithTheme
 
-const val VERSAO_APP = "V3"
+const val VERSAO_APP = "V4"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

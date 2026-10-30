@@ -30,7 +30,6 @@ import com.matheus.pontosvoith.ui.theme.CorAviso
 import com.matheus.pontosvoith.ui.theme.CorErro
 import com.matheus.pontosvoith.ui.theme.CorOk
 
-/** Botão redondo de ponto: encolhe ao tocar e, se for o "próximo esperado", emite ondas. */
 @Composable
 fun BotaoPonto(texto: String, cor: Color, destaque: Boolean, habilitado: Boolean, onClick: () -> Unit) {
     val interacao = remember { MutableInteractionSource() }
@@ -76,7 +75,6 @@ fun PontoPulsante(cor: Color = CorOk) {
     Box(Modifier.size(10.dp).alpha(a).clip(CircleShape).background(cor))
 }
 
-/** Contador cujos dígitos "rolam" ao mudar. */
 @Composable
 fun ContadorAnimado(texto: String, tamanho: TextUnit = 40.sp, cor: Color = MaterialTheme.colorScheme.onSurface) {
     Row {
@@ -95,17 +93,16 @@ fun ContadorAnimado(texto: String, tamanho: TextUnit = 40.sp, cor: Color = Mater
     }
 }
 
-/** Texto de horas que "conta" até o valor ao aparecer/mudar. */
 @Composable
 fun HorasAnimadas(ms: Long, tamanho: TextUnit = 22.sp, cor: Color = MaterialTheme.colorScheme.onSurface) {
-    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
+    val anim = remember { Animatable(0f) }
     LaunchedEffect(ms) { anim.animateTo(ms.toFloat(), tween(900, easing = FastOutSlowInEasing)) }
     Text(duracaoTexto(anim.value.toLong()), fontSize = tamanho, fontWeight = FontWeight.SemiBold, color = cor)
 }
 
 @Composable
 fun NumeroAnimado(valor: Int, tamanho: TextUnit = 22.sp, cor: Color = MaterialTheme.colorScheme.onSurface) {
-    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
+    val anim = remember { Animatable(0f) }
     LaunchedEffect(valor) { anim.animateTo(valor.toFloat(), tween(700, easing = FastOutSlowInEasing)) }
     Text(anim.value.toInt().toString(), fontSize = tamanho, fontWeight = FontWeight.SemiBold, color = cor)
 }
@@ -113,7 +110,6 @@ fun NumeroAnimado(valor: Int, tamanho: TextUnit = 22.sp, cor: Color = MaterialTh
 enum class TipoMensagem { OK, AVISO, ERRO }
 data class Mensagem(val tipo: TipoMensagem, val texto: String, val id: Long = System.nanoTime())
 
-/** Texto animado de confirmação (sucesso/aviso/erro). */
 @Composable
 fun MensagemAnimada(mensagem: Mensagem?) {
     AnimatedContent(
@@ -139,7 +135,6 @@ fun MensagemAnimada(mensagem: Mensagem?) {
     }
 }
 
-/** Mensagem que some sozinha após alguns segundos. */
 @Composable
 fun rememberMensagem(): MutableState<Mensagem?> {
     val estado = remember { mutableStateOf<Mensagem?>(null) }
@@ -152,7 +147,6 @@ fun rememberMensagem(): MutableState<Mensagem?> {
     return estado
 }
 
-/** Seletor  ‹ texto ›  usado para dia e mês. */
 @Composable
 fun SeletorPeriodo(
     texto: String,
@@ -208,5 +202,13 @@ fun CartaoBase(modifier: Modifier = Modifier, conteudo: @Composable ColumnScope.
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(Modifier.padding(14.dp), content = conteudo)
+    }
+}
+
+@Composable
+fun LinhaResumo(rotulo: String, valor: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(rotulo, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        valor()
     }
 }

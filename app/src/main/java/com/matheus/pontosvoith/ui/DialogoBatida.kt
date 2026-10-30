@@ -22,10 +22,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 
-/**
- * Diálogo para INCLUIR (inicial = null) ou EDITAR uma batida.
- * Data e hora usam os seletores nativos do Android.
- */
+/** Diálogo para INCLUIR (inicial = null) ou EDITAR uma batida. */
 @Composable
 fun DialogoBatida(
     inicial: Batida?,
@@ -49,7 +46,6 @@ fun DialogoBatida(
     var confirmarExclusao by remember { mutableStateOf(false) }
 
     fun calcularMillis(): Long {
-        // Se data/hora (minutos) não mudaram, mantém os segundos originais.
         if (inicial != null && origLdt != null &&
             origLdt.toLocalDate() == data && origLdt.hour == hora.hour && origLdt.minute == hora.minute
         ) return inicial.dataHora
@@ -130,16 +126,12 @@ fun DialogoBatida(
         dismissButton = { TextButton(onClick = onFechar) { Text("Cancelar") } }
     )
 
-    if (confirmarExclusao && onExcluir != null) {
-        AlertDialog(
-            onDismissRequest = { confirmarExclusao = false },
-            title = { Text("Excluir registro?") },
-            text = { Text("Esta ação não pode ser desfeita.") },
-            confirmButton = {
-                TextButton(onClick = { confirmarExclusao = false; onExcluir() }) { Text("Excluir", color = CorErro) }
-            },
-            dismissButton = { TextButton(onClick = { confirmarExclusao = false }) { Text("Cancelar") } }
+    if (confirmarExclusao && onExcluir != null && inicial != null) {
+        DialogoExclusao(
+            registros = listOf(inicial),
+            avisoTurno = false,
+            onCancelar = { confirmarExclusao = false },
+            onConfirmar = { confirmarExclusao = false; onExcluir() }
         )
     }
 }
-

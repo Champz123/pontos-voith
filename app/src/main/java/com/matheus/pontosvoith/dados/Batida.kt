@@ -37,10 +37,14 @@ data class Batida(
     val ajustado: Boolean,
     val dataAjuste: Long?,
     val valorOriginal: Long?,
-    val obsAjuste: String?
+    val obsAjuste: String?,
+    val criadoEm: Long
 ) {
     val retroativa: Boolean get() = origem == Origem.RETROATIVA
+    val entrada: Boolean get() = tipo == TipoBatida.ENTRADA
 }
+
+fun nomeTipo(t: String) = if (t == TipoBatida.ENTRADA) "Entrada" else "Saída"
 
 fun Long.paraData(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate()
 
@@ -57,6 +61,13 @@ data class Turno(val entrada: Batida?, val saida: Batida?, val emAndamento: Bool
         }
     /** O turno pertence ao dia da ENTRADA (ex.: 20:00 -> 03:00 conta no dia da entrada). */
     val dia: LocalDate get() = inicio.paraData()
+    val situacao: String
+        get() = when {
+            completo -> "Completo"
+            emAndamento -> "Em andamento"
+            entrada == null -> "Saída sem entrada"
+            else -> "Sem saída"
+        }
 }
 
 /** Monta os turnos a partir de todas as batidas (ordem cronológica). */
@@ -66,13 +77,13 @@ fun montarTurnos(batidas: List<Batida>): List<Turno> {
     var aberta: Batida? = null
     for (b in ord) {
         if (b.tipo == TipoBatida.ENTRADA) {
-            if (aberta != null) res += Turno(aberta, null) // entrada sem saída
+            if (aberta != null) res += Turno(aberta, null)
             aberta = b
         } else {
             if (aberta != null) {
                 res += Turno(aberta, b); aberta = null
             } else {
-                res += Turno(null, b) // saída sem entrada
+                res += Turno(null, b)
             }
         }
     }
@@ -80,11 +91,12 @@ fun montarTurnos(batidas: List<Batida>): List<Turno> {
     return res
 }
 
-data class EstadoTurno(val abertoDesde: Batida?, val ultimoCompleto: Turno?)
+data class EstadoTurno(val abertoDesde: Batida?, val ultimoCompleto: Turno?, val ultimaBatida: Batida?)
 
-fun calcularEstado(turnos: List<Turno>): EstadoTurno = EstadoTurno(
+fun calcularEstado(turnos: List<Turno>, todas: List<Batida>): EstadoTurno = EstadoTurno(
     abertoDesde = turnos.lastOrNull()?.takeIf { it.emAndamento }?.entrada,
-    ultimoCompleto = turnos.lastOrNull { it.completo }
+    ultimoCompleto = turnos.lastOrNull { it.completo },
+    ultimaBatida = todas.maxWithOrNull(compareBy({ it.dataHora }, { it.id }))
 )
 
 /** Horas trabalhadas (ms) por dia, somente turnos completos. */

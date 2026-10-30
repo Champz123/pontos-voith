@@ -79,10 +79,7 @@ object Repositorio {
         notificar()
     }
 
-    /**
-     * Edita uma batida e a marca como "ajustada". Guarda o horário ORIGINAL
-     * (somente na primeira edição). Retorna false se nada mudou.
-     */
+    /** Edita uma batida e a marca como "ajustada" (guarda o horário original). */
     suspend fun editar(id: Long, tipo: String, dataHora: Long, obs: String?): Boolean = withContext(Dispatchers.IO) {
         require(dataHora <= System.currentTimeMillis()) { "Não é possível registrar no futuro" }
         val atual = buscar(id) ?: return@withContext false
@@ -97,7 +94,6 @@ object Repositorio {
             put("tipo", tipo)
             put("data_hora", dataHora)
             put("obs_ajuste", obsFinal)
-            // Registros retroativos já são marcados como tal; só os normais viram "ajustado".
             if (!atual.retroativa && (atual.dataHora != dataHora || atual.tipo != tipo)) {
                 put("ajustado", 1)
                 put("data_ajuste", System.currentTimeMillis())
@@ -109,12 +105,72 @@ object Repositorio {
         true
     }
 
-    suspend fun excluir(id: Long) = withContext(Dispatchers.IO) {
-        db.writableDatabase.delete("batidas", "id = ?", arrayOf(id.toString()))
+    suspend fun excluir(id: Long) = excluirVarios(listOf(id))
+
+    /** Exclusão em lote (transação única). Retorna a quantidade excluída. */
+    suspend fun excluirVarios(ids: Collection<Long>): Int = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext 0
+        val w = db.writableDatabase
+        var n = 0
+        w.beginTransaction()
+        try {
+            ids.forEach { n += w.delete("batidas", "id = ?", arrayOf(it.toString())) }
+            w.setTransactionSuccessful()
+        } finally {
+            w.endTransaction()
+        }
         notificar()
+        n
     }
 
-    private fun nomeTipo(t: String) = if (t == TipoBatida.ENTRADA) "Entrada" else "Saída"
+    // ---------------------------------------------------------------- backup
+
+    /** Restaura batidas de um backup. substituir=true apaga tudo antes. Retorna (inseridos, ignorados). */
+    suspend fun restaurar(lista: List<Batida>, substituir: Boolean): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        val w = db.writableDatabase
+        var ins = 0
+        var ign = 0
+        w.beginTransaction()
+        try {
+            if (substituir) w.delete("batidas", null, null)
+            val existentes = HashSet<String>()
+            if (!substituir) {
+                w.query("batidas", arrayOf("tipo", "data_hora"), null, null, null, null, null).use { c ->
+                    while (c.moveToNext()) existentes += "${c.getString(0)}|${c.getLong(1)}"
+                }
+            }
+            lista.forEach { b ->
+                val chave = "${b.tipo}|${b.dataHora}"
+                if (chave in existentes) {
+                    ign++
+                } else {
+                    existentes += chave
+                    val cv = ContentValues().apply {
+                        put("tipo", b.tipo)
+                        put("data_hora", b.dataHora)
+                        if (b.latitude != null) put("latitude", b.latitude)
+                        if (b.longitude != null) put("longitude", b.longitude)
+                        if (b.precisao != null) put("precisao", b.precisao)
+                        if (b.endereco != null) put("endereco", b.endereco)
+                        put("status_local", if (b.statusLocal == StatusLocal.PENDENTE) StatusLocal.INDISPONIVEL else b.statusLocal)
+                        put("origem", b.origem)
+                        put("ajustado", if (b.ajustado) 1 else 0)
+                        if (b.dataAjuste != null) put("data_ajuste", b.dataAjuste)
+                        if (b.valorOriginal != null) put("valor_original", b.valorOriginal)
+                        if (b.obsAjuste != null) put("obs_ajuste", b.obsAjuste)
+                        put("criado_em", b.criadoEm)
+                    }
+                    w.insertOrThrow("batidas", null, cv)
+                    ins++
+                }
+            }
+            w.setTransactionSuccessful()
+        } finally {
+            w.endTransaction()
+        }
+        notificar()
+        ins to ign
+    }
 
     // ---------------------------------------------------------------- localização
 
@@ -141,7 +197,6 @@ object Repositorio {
         notificar()
     }
 
-    /** Tenta preencher endereços que ficaram vazios (registrados sem internet). */
     fun preencherEnderecosPendentes() {
         escopo.launch {
             val pend = mutableListOf<Triple<Long, Double, Double>>()
@@ -155,7 +210,6 @@ object Repositorio {
 
     // ---------------------------------------------------------------- consultas
 
-    /** Todas as batidas em ordem cronológica (uso pessoal: volume pequeno). */
     suspend fun todas(): List<Batida> = withContext(Dispatchers.IO) {
         db.readableDatabase.query("batidas", null, null, null, null, null, "data_hora ASC, id ASC")
             .use { c -> buildList { while (c.moveToNext()) add(c.toBatida()) } }
@@ -182,7 +236,8 @@ object Repositorio {
             ajustado = getInt(getColumnIndexOrThrow("ajustado")) == 1,
             dataAjuste = lng("data_ajuste"),
             valorOriginal = lng("valor_original"),
-            obsAjuste = str("obs_ajuste")
+            obsAjuste = str("obs_ajuste"),
+            criadoEm = lng("criado_em") ?: 0L
         )
     }
 }

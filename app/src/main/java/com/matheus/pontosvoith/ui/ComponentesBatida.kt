@@ -1,15 +1,28 @@
 package com.matheus.pontosvoith.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,22 +46,55 @@ fun textoLocal(b: Batida): String = when (b.statusLocal) {
     else "Localização indisponível"
 }
 
-/** Cartão de uma batida, com selos "Ajustado" e "Retroativo". */
+/**
+ * Cartão de uma batida, com selos "Ajustado" e "Retroativo".
+ * Toque = onClick | Toque longo = onLongClick (seleção múltipla).
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ItemBatida(b: Batida, mostrarData: Boolean = true, onClick: (() -> Unit)? = null) {
+fun ItemBatida(
+    b: Batida,
+    mostrarData: Boolean = true,
+    modoSelecao: Boolean = false,
+    selecionado: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
+) {
     val cs = MaterialTheme.colorScheme
     val entrada = b.tipo == TipoBatida.ENTRADA
     val corTipo = if (entrada) cs.primary else VoithNavy
+    val fundo by animateColorAsState(
+        if (selecionado) cs.primary.copy(alpha = 0.16f) else cs.surface, tween(220), label = "fundo"
+    )
+    val borda by animateColorAsState(
+        if (selecionado) cs.primary else Color.Transparent, tween(220), label = "borda"
+    )
+    val forma = RoundedCornerShape(14.dp)
     Card(
         Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = cs.surface)
+            .clip(forma)
+            .border(2.dp, borda, forma)
+            .then(
+                if (onClick != null || onLongClick != null)
+                    Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = onLongClick)
+                else Modifier
+            ),
+        shape = forma,
+        colors = CardDefaults.cardColors(containerColor = fundo)
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            AnimatedVisibility(
+                visible = modoSelecao,
+                enter = expandHorizontally(tween(220)) + fadeIn(tween(220)),
+                exit = shrinkHorizontally(tween(180)) + fadeOut(tween(150))
+            ) {
+                Row {
+                    CaixaSelecao(selecionado)
+                    Spacer(Modifier.width(12.dp))
+                }
+            }
             Box(Modifier.size(12.dp).clip(CircleShape).background(corTipo))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -70,15 +116,34 @@ fun ItemBatida(b: Batida, mostrarData: Boolean = true, onClick: (() -> Unit)? = 
                 }
                 Text("📍 ${textoLocal(b)}", fontSize = 12.sp, color = cs.onSurface.copy(alpha = 0.65f))
                 b.endereco?.let { Text(it, fontSize = 12.sp, color = cs.onSurface.copy(alpha = 0.65f), maxLines = 2) }
-                if (b.ajustado && b.valorOriginal != null) {
+                val orig = b.valorOriginal
+                if (b.ajustado && orig != null) {
                     Text(
-                        "Original: ${b.valorOriginal.formatar(FMT_DIA)} ${b.valorOriginal.formatar(FMT_HORA)}",
+                        "Original: ${orig.formatar(FMT_DIA)} ${orig.formatar(FMT_HORA)}",
                         fontSize = 12.sp, color = CorAviso
                     )
                 }
                 b.obsAjuste?.let { Text("Obs.: $it", fontSize = 12.sp, color = cs.onSurface.copy(alpha = 0.75f)) }
             }
-            if (onClick != null) Text("✎", color = cs.primary, fontSize = 18.sp)
+            if (onClick != null && !modoSelecao) Text("✎", color = cs.primary, fontSize = 18.sp)
+        }
+    }
+}
+
+@Composable
+private fun CaixaSelecao(marcado: Boolean) {
+    val cs = MaterialTheme.colorScheme
+    val fundo by animateColorAsState(if (marcado) cs.primary else Color.Transparent, tween(180), label = "cx")
+    Box(
+        Modifier
+            .size(22.dp)
+            .clip(CircleShape)
+            .background(fundo)
+            .border(2.dp, if (marcado) cs.primary else cs.onSurface.copy(alpha = 0.4f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedVisibility(visible = marcado, enter = scaleIn(tween(180)), exit = scaleOut(tween(120))) {
+            Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

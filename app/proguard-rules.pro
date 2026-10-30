@@ -1,1 +1,1 @@
-# Sem regras extras: o banco usa SQLite nativo (sem reflexão).
+# Sem regras extras: SQLite nativo, org.json e PdfDocument são do próprio Android.

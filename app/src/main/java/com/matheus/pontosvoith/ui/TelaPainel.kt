@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -30,7 +31,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
 
-/** Dashboard (somente horas trabalhadas) + gráficos animados. */
 @Composable
 fun TelaPainel(mes: YearMonth, onMes: (YearMonth) -> Unit, turnos: List<Turno>) {
     val cs = MaterialTheme.colorScheme
@@ -108,7 +108,6 @@ private fun CartaoKpi(titulo: String, modifier: Modifier, valor: @Composable () 
     }
 }
 
-/** Barras animadas (crescem de baixo para cima). */
 @Composable
 fun GraficoBarras(valores: List<Float>, chave: Any) {
     val cs = MaterialTheme.colorScheme
@@ -132,7 +131,6 @@ fun GraficoBarras(valores: List<Float>, chave: Any) {
         val topo = 14.dp.toPx()
         val baseY = size.height - rodape
         val altUtil = baseY - topo
-        // linhas de grade (25/50/75/100%)
         for (i in 1..4) {
             val y = baseY - altUtil * i / 4f
             drawLine(corGrade, Offset(0f, y), Offset(size.width, y), 1.dp.toPx(),
@@ -162,7 +160,6 @@ fun GraficoBarras(valores: List<Float>, chave: Any) {
     }
 }
 
-/** Linha animada (desenhada da esquerda para a direita). */
 @Composable
 fun GraficoLinha(valores: List<Float>, rotulos: List<String>, chave: Any) {
     val cs = MaterialTheme.colorScheme
@@ -189,7 +186,6 @@ fun GraficoLinha(valores: List<Float>, rotulos: List<String>, chave: Any) {
         val passo = if (n > 1) (size.width - 2 * margemX) / (n - 1) else 0f
         val pontos = valores.mapIndexed { i, v -> Offset(margemX + i * passo, baseY - (v / max) * altUtil) }
 
-        // até onde desenhar
         val alcance = prog.value * (n - 1)
         val path = Path()
         val area = Path()
@@ -198,7 +194,6 @@ fun GraficoLinha(valores: List<Float>, rotulos: List<String>, chave: Any) {
             if (i == 0) { path.moveTo(p.x, p.y); area.moveTo(p.x, baseY); area.lineTo(p.x, p.y) }
             else { path.lineTo(p.x, p.y); area.lineTo(p.x, p.y) }
         }
-        // segmento parcial
         val iBase = alcance.toInt()
         if (iBase < n - 1) {
             val f = alcance - iBase
@@ -231,8 +226,7 @@ fun GraficoLinha(valores: List<Float>, rotulos: List<String>, chave: Any) {
 
 @Composable
 private fun SemDados() {
-    Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+    Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
         Text("Sem horas registradas neste período.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
     }
 }
-
